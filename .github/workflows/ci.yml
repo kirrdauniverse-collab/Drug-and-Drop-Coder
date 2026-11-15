@@ -34,3 +34,38 @@ jobs:
 
       - name: Build
         run: bun run build
+
+  # API-biztonsági E2E: dev szerverrel szemben fut (Prisma + SQLite kell).
+  e2e-api:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "file:./ci.db"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Függőségek telepítése
+        run: bun install --frozen-lockfile
+
+      - name: Prisma adatbázis előkészítése
+        run: |
+          bunx prisma generate
+          bunx prisma db push
+
+      - name: Dev szerver indítása
+        run: |
+          bun run dev &
+          for i in $(seq 1 60); do
+            sleep 2
+            if curl -sf http://localhost:3000/api > /dev/null; then
+              echo "szerver kész"
+              exit 0
+            fi
+          done
+          echo "a szerver nem indult el 120 s alatt"
+          exit 1
+
+      - name: API-biztonsági E2E
+        run: node scripts/e2e-api-security.mjs
