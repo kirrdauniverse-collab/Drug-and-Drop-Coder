@@ -18,21 +18,32 @@ körök sorrendben veszik a P1 → P2 → P3 tételeket.
 | 8 | Felhő-dialógus: méret-előellenőrzés, hiba-toastok szerverüzenettel, tokenkezelés | `src/components/editor/dialogs.tsx` |
 
 E2E-bizonyíték: 18/18 API-biztonsági teszt (`scripts/e2e-api-security.mjs`), 17/17 unit teszt,
-böngészős demó-futás ellenőrzve.
+böngészős demó-futás ellenőrizve.
 
-## P1 – Stabilitás és tartalom (következő kör)
+## P1 – Stabilitás és tartalom (KÉSZ – 2026-11-15 második kör)
 
-1. **Engine unit tesztek a tiszta logikára** (review 10): ütközés-detektálás, ugrás/platform,
-   győzelem + pontszám-frissítés – a `src/lib/games/` modulok tiszta segédfüggvényeire,
-   mínusz a canvas/window függőség.
-2. **Demó-regressziós E2E**: agent-browser szkript, ami végigjátsza a 14 demót
-   (főmenü → Indítás → game over) – új motorváltoztatás ne törhesse el őket csendben.
-3. **Megosztási link**: `?project=<id>` betöltés URL-ből (a nyilvános olvasás már van).
-4. **Publish/private flag** a `SavedProject`-ben – a lista csak publikusat mutat, a link privátot is.
-5. **Auto-save restore pontok** (könnyített versioning): az autosave mellé 5 állapot-rollback
-   localStorage-ban.
+1. **Engine unit tesztek a tiszta logikára** (KÉSZ): a motor ütközés (`hitTest`),
+   platform-fizika (`stepJumpPhysics`) és amőba-győzelem (`boardWin`) logikája
+   kivonva az `engine-logic.ts` tiszta modulba, amit az engine.ts delegál –
+   27 új unit teszttel (44 teszt összesen, mind zöld).
+2. **Demó-regressziós E2E** (KÉSZ): `scripts/e2e-demos.mjs` – a 14 demó közül 13
+   végigjátsása (menü → betöltés → lejátszás → léptető mozgás + eseménynapló),
+   26 ellenőrzés, mind zöld; az online mód külön szerverrel tesztelendő (skip).
+3. **Megosztási link** (KÉSZ): `?project=<id>` URL-ből betöltés induláskor,
+   validációval és toast-hibákkal; a privát projekt linken is elérhető.
+4. **Publish/private flag** (KÉSZ): `published` mező a `SavedProject`-ben;
+   a GET lista csak publikusat mutat; `PATCH /api/projects/[id]` (token-védett)
+   váltja; `POST /api/projects/mine` a saját tokenekhez tartozó listáért;
+   a CloudDialog-ban szem ikonnal váltható, MEGOSZTVA jelzővel.
+5. **Auto-save restore pontok** (KÉSZ): 5 rollback-pillanat localStorage-ban
+   (`appmixer.rollback.v1`), demóváltás/import/felhő-betöltés alkalmával keletkeznek;
+   a Projekt menü „Visszaállítási pontok" almenüjéből visszaállíthatók (confirm-nal).
 
-## P2 – Architektúra refaktor (csak a P1 tesztek után)
+E2E-bizonyíték: 23/23 API-biztonsági teszt (a publish/mine/PATCH útvonalakkal bővítve),
+44/44 unit teszt, 26/26 demó-E2E ellenőrzés, production build típusellenőrzéssel
+(ignoreBuildErrors eltávolítva).
+
+## P2 – Architektúra refaktor (következő kör – most már van védőháló)
 
 1. **`engine.ts` szétbontása** (review 5): `gameState.ts`, `systems/{physics,collision,render,logic}.ts`,
    game-rules modul – fokozatosan, téma-módra (circle) kivonva, minden lépés után a demó-regressziós

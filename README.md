@@ -42,7 +42,7 @@ Ahogy a zeneszerkesztőkben a hangmintákat teszed az idővonalra, itt **blokkok
 - **🖼️ Saját tartalmak** – kép (PNG/JPG/SVG) és hang (MP3/WAV/OGG) feltöltés; a feltöltött kép lehet dísz, játékos, ellenség, gyűjtendő vagy háttér, a hang hangerővel és lejátszási sebességgel
 - **▶️ Élő lejátszó** – léptetőfejes futtatás, canvas előnézet, eseménynapló, pont/élet HUD
 - **🧠 Vezérlés** – feltételekkel és ugrásokkal igazi játékmenetet építhetsz (pl. „ha pont ≥ 50 → új szint")
-- **💾 Projektkezelés** – mentés böngészőbe, felhő-gyűjtemény (API), undo/redo; a régebben mentett projektek automatikusan megkapják az új paramétereket
+- **💾 Projektkezelés** – mentés böngészőbe, felhő-gyűjtemény (API), undo/redo, **megosztási linkek** (`?project=<id>` – a Felhő ablakban a szem ikonnal kapcsold be), és **visszaállítási pontok** (a Projekt menüben; demóváltásnál, importnál, felhő-betöltésnél automatikusan keletkeznek, az utolsó 5 elérhető); a régebben mentett projektek automatikusan megkapják az új paramétereket
 - **📱 Reszponzív** – mobilon panel-tabokkal
 
 ## Gyors kezdés

@@ -2,17 +2,16 @@
 
 | | |
 |---|---|
-| **Készült** | 2026-11-15 |
+| **Készült** | 2026-11-15 (P1 körrel frissítve) |
 | **Repó** | https://github.com/kirrdauniverse-collab/Drud-Drop-Coder.git |
-| **HEAD** | `cdf65d7` (main, 16 commit, mind feltöltve GitHubra) |
 | **Cél** | Önellátó átadás: ebből a dokumentumból egy új fejlesztő vagy modell a repó elhagyása nélkül tudja folytatni a munkát |
-| **Kapcsolódó doksik** | `README.md` (termék-áttekintés), `ROADMAP.md` (P0–P3 prioritások, a P0 kész) |
+| **Kapcsolódó doksik** | `README.md` (termék-áttekintés), `ROADMAP.md` (P0–P3 prioritások, a P0 és P1 kész), `ANALYSIS.md` (kódbázis-elemzés) |
 
 ---
 
 ## 1. Mi ez a projekt?
 
-**AppMixer** egy böngészős, több sávos „alkalmazás- és játékszerkesztő" (eJay / Music Maker elrendezés, magyar nyelvű felület): a felhasználó blokkokat húz egy timeline-ra (esemény → művelet), paraméterezi őket, és a lejátszás gombra a beépített runtime-motor végigfuttatja a sávokat lépésenként (tempó-vezérelt szekvenszer). A blokkok szintetizálnak zenét (WebAudio, külső fájl nélkül), rajzolnak sprite-okat/háttereket canvasra, irányítanak játékmenetet, és valódi játékmód-motorokat is meg tudnak hívni: első személyű FPS-labirintus, verseny, osztott képernyős kétjátékos verseny, féregcsata, építőmester, grafikus kaland és online kétjátékos párbaj (külön Bun-alapú socket.io szolgáltatással). A projektek menthetők böngészőbe, JSON fájlba, illetve felhőbe (SQLite + anonim tulajdonosi token), és 14 beépített demóprojekt mutatja be az összes funkciót.
+**AppMixer** egy böngészős, több sávos „alkalmazás- és játékszerkesztő" (eJay / Music Maker elrendezés, magyar nyelvű felület): a felhasználó blokkokat húz egy timeline-ra (esemény → művelet), paraméterezi őket, és a lejátszás gombra a beépített runtime-motor végigfuttatja a sávokat lépésenként (tempó-vezérelt szekvenszer). A blokkok szintetizálnak zenét (WebAudio, külső fájl nélkül), rajzolnak sprite-okat/háttereket canvasra, irányítanak játékmenetet, és valódi játékmód-motorokat is meg tudnak hívni: első személyű FPS-labirintus, verseny, osztott képernyős kétjátékos verseny, féregcsata, építőmester, grafikus kaland és online kétjátékos párbaj (külön Bun-alapú socket.io szolgáltatással). A projektek menthetők böngészőbe, JSON fájlba, illetve felhőbe (SQLite + anonim tulajdonosi token), **megoszthatók linkekkel** (`?project=<id>`), és 14 beépített demóprojekt mutatja be az összes funkciót.
 
 Egyetlen oldalas Next.js app (`src/app/page.tsx`), hárompaneles szerkesztővel (könyvtár / timeline + preview / inspector).
 
@@ -20,19 +19,20 @@ Egyetlen oldalas Next.js app (`src/app/page.tsx`), hárompaneles szerkesztővel 
 
 | Réteg | Technológia | Megjegyzés |
 |---|---|---|
-| Framework | Next.js `^16.1.1` (App Router), React `^19` | `output: "standalone"` a next.config.ts-ben; `typescript.ignoreBuildErrors: true` – a typecheck CI-ben/lokálisan külön fut! |
+| Framework | Next.js `^16.1.1` (App Router), React `^19` | `output: "standalone"`; a build típusellenőriz (ignoreBuildErrors ELTÁVOLÍTVA); `turbopack.root` beállítva (multi-lockfile ellen) |
 | Nyelv | TypeScript 5 (strict, de `noImplicitAny: false`) | |
-| UI | Tailwind CSS v4 + shadcn/ui (`src/components/ui/`, ~60 fájl) | A ui/ fájlok nagy része kihasználatlan scaffold; a szerkesztő button/input/slider/switch/select/dialog/dropdown/popover/toast-ot használ |
-| Állapot | Zustand `^5` | Két store: `editor.ts`, `drag.ts` (saját pointer-drag, NEM dnd-kit – a @dnd-kit csomag telepítve, de nem használt) |
+| UI | Tailwind CSS v4 + shadcn/ui (`src/components/ui/`, 11 fájl) | A scaffold-fájlok törlése megtörtént; a szerkesztő button/input/slider/switch/select/dialog/dropdown/popover/toast-ot használ |
+| Állapot | Zustand `^5` | Két store: `editor.ts`, `drag.ts` (saját pointer-drag) |
 | Validáció | Zod `^4` (izomorf, kliens + szerver) | `src/lib/projectSchema.ts` |
-| DB | Prisma `^6.11` + SQLite | `DATABASE_URL` env, DB fájl: `db/custom.db` |
+| DB | Prisma `^6.11` + SQLite | `DATABASE_URL` env, DB fájl: `db/custom.db`; `SavedProject.published` mező a megosztási listához |
 | Runtime / csomagkezelő | **Bun** (dev, build, futtatás, lockfile: `bun.lock`) | |
 | Online mód | socket.io (kliens `^4.8.4`) + saját Bun szerver | `mini-services/duel-service/`, port 3004 |
-| Teszt | Vitest `^5.1` (nincs külön config, defaultok) | 17 unit teszt |
-| Lint | ESLint 9 (next/core-web-vitals; a szabályok nagy része kikapcsolva) | |
-| Deploy | `.zscripts/` shell szkriptek + Caddy reverse proxy | Caddy: port 81, `XTransformPort=<port>` query → `localhost:<port>` |
+| Teszt | Vitest `^5.1` | 44 unit teszt; `scripts/e2e-api-security.mjs` (23 teszt); `scripts/e2e-demos.mjs` (26 ellenőrzés, 13 demó) |
+| Lint | ESLint 9 (next/core-web-vitals) | A létfontossú szabályok visszakapcsolva (exhaustive-deps=warn, prefer-const, no-debugger…); a lint 0 warningon fut |
 
-Nem használt scaffold-függőségek (ne építs rájuk gond nélkül): `@dnd-kit/*`, `next-auth`, `next-intl`, `@tanstack/react-query`, `recharts`, `sharp`, `z-ai-web-dev-sdk` (nulla import az egész repóban), `@mdxeditor/editor`, `framer-motion`.
+A scaffold-függőségek kivezetve (86 → 22 dependencies): a @dnd-kit, next-auth, next-intl,
+react-query, recharts, sharp, z-ai-sdk, mdx-editor, framer-motion stb. már NINCS a
+package.json-ben.
 
 ## 3. Futtatás, build, deploy
 
@@ -183,9 +183,11 @@ Közös alap: `base.ts` – `GameCtx` interfész (motor→mód callbackek) és `
 
 | Route | Metódus | Mit csinál | Védelmek |
 |---|---|---|---|
-| `/api/projects` | GET | összes projekt listája (`id`, `name`, `updatedAt` – adat NEM szivárog) | – |
-| `/api/projects` | POST | upsert mentés; válasz `{project, ownerToken}` | rate limit 30 kérés/60 s/IP (`rateLimit("save:"+ip)`), id regex `^[a-zA-Z0-9_-]{8,64}$`, Zod `validateProjectData`, 8 MB korlát → 413, **tulajdonos-ellenőrzés**: ha a meglévő sornak van `ownerTokenHash`-a, egyező token kell (header `x-owner-token` vagy body `ownerToken`), különben **403** |
-| `/api/projects/[id]` | GET | teljes projekt | 404 ha nincs; parse-guard (422 `corrupt_data`) + Zod újravalidáció (422) |
+| `/api/projects` | GET | **csak publikus (megosztott) projektek** listája (`id`, `name`, `updatedAt` – adat NEM szivárog) | rate limit 30 kérés/60 s/IP |
+| `/api/projects` | POST | upsert mentés | rate limit 30 kérés/60 s/IP (`rateLimit("save:"+ip)`), id regex `^[a-zA-Z0-9_-]{8,64}$`, Zod `validateProjectData`, 8 MB korlát → 413, **tulajdonos-ellenőrzés**: ha a meglévő sornak van `ownerTokenHash`-a, egyező token kell (header `x-owner-token` vagy body `ownerToken`), különben **403**; a mentés **megőrzi a published állapotot** |
+| `/api/projects/[id]` | GET | teljes projekt (betöltéshez és a **`?project=<id>` megosztási linkhez** – privát projekt is elérhető így) | 404 ha nincs; parse-guard (422 `corrupt_data`) + Zod újravalidáció (422) |
+| `/api/projects/[id]` | PATCH | **megosztási állapot váltása** (`{published: true/false}`) | rate limit 30/60 s, 404, tulajdonos-ellenőrzés → 403 |
+| `/api/projects/mine` | POST | a böngészőben tárolt tulajdonosi tokenekhez tartozó saját projektek listája (`id`, `name`, `updatedAt`, `published`) | rate limit 30/60 s; **csak SHA-256 hash hasonlítás** – a token soha nem tárolódik |
 | `/api/projects/[id]` | DELETE | törlés | rate limit 30/60 s, 404, tulajdonos-ellenőrzés → 403 |
 | `/api` | GET | health stub `{message:"Hello, world!"}` | – |
 
