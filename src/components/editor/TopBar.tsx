@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef } from "react";
-import { useEditor } from "@/store/editor";
+import { useEffect, useRef, useState } from "react";
+import { useEditor, getRollbackPoints } from "@/store/editor";
+import type { Project } from "@/lib/types";
 import { getEngine } from "@/lib/engine";
 import { audioEngine } from "@/lib/audio";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,9 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
-import { Play, Pause, Square, Repeat, Volume2, Undo2, Redo2, Save, Cloud, HelpCircle, SlidersHorizontal, FileDown, FileUp, FilePlus2, Rocket, Moon, Gauge, Gamepad2, LayoutGrid, Sword, MousePointerClick, Crosshair, Flag, Columns2, Bomb, Hammer, Compass, Globe } from "lucide-react";
+import { Play, Pause, Square, Repeat, Volume2, Undo2, Redo2, Save, Cloud, HelpCircle, SlidersHorizontal, FileDown, FileUp, FilePlus2, Rocket, Moon, Gauge, Gamepad2, LayoutGrid, Sword, MousePointerClick, Crosshair, Flag, Columns2, Bomb, Hammer, Compass, Globe, History, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { validateProjectData } from "@/lib/projectSchema";
 
@@ -38,6 +40,20 @@ export function TopBar({
   const saveLocal = useEditor((s) => s.saveLocal);
   const importRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Visszaállítási pontok (autosave rollback): a menü megnyitásakor frissítjük,
+  // mert a pontok localStorage-ben élnek és React-állapoton kívül keletkeznek.
+  const [rollbackPoints, setRollbackPoints] = useState(() => getRollbackPoints());
+  useEffect(() => {
+    const t = setInterval(() => setRollbackPoints(getRollbackPoints()), 2000);
+    return () => clearInterval(t);
+  }, []);
+
+  const restoreRollback = async (rb: { at: number; project: Project }) => {
+    if (!window.confirm(`Visszaállítod a „${rb.project?.name ?? "Névtelen"}” pillanatot? A mostani projekt lecserélidik.`)) return;
+    useEditor.getState().loadProject(rb.project);
+    toast({ title: "Állapot visszaállítva", description: `„${rb.project.name}” visszatöltve a ${new Date(rb.at).toLocaleString("hu-HU")} pontból.` });
+  };
 
   const handlePlay = () => {
     const engine = getEngine();
@@ -252,6 +268,34 @@ export function TopBar({
               <DropdownMenuItem onClick={() => importRef.current?.click()} className="gap-2">
                 <FileUp className="size-4" /> Importálás (JSON fájl)
               </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-zinc-800" />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="gap-2 data-[disabled=true]:text-zinc-500" data-disabled={rollbackPoints.length === 0 || undefined}>
+                  <History className="size-4" /> Visszaállítási pontok ({rollbackPoints.length})
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="bg-zinc-900 border-zinc-700 min-w-56">
+                  {rollbackPoints.length === 0 && (
+                    <div className="px-2 py-1.5 text-[11px] text-zinc-500 italic">
+                      Még nincs mentett pont – demóváltásnál, importnál és felhő-betöltésnél jön létre.
+                    </div>
+                  )}
+                  {rollbackPoints.map((rb, i) => (
+                    <DropdownMenuItem
+                      key={`${rb.at}-${i}`}
+                      onClick={() => void restoreRollback(rb)}
+                      className="gap-2"
+                    >
+                      <RotateCcw className="size-3.5" />
+                      <span className="flex flex-col">
+                        <span className="text-xs">{rb.project?.name ?? "Névtelen"}</span>
+                        <span className="text-[9px] text-zinc-500">
+                          {new Date(rb.at).toLocaleString("hu-HU")}
+                        </span>
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             </DropdownMenuContent>
           </DropdownMenu>
           <input

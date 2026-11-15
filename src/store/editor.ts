@@ -7,6 +7,45 @@ import { demoSpaceProject, demoChillProject, demoPlatformProject, demoGalagaProj
 
 const LS_KEY = "appmixer.project.v1";
 
+// ===== Autosave rollback pontok (gyors győzelem: 5 visszaállítható állapot) =====
+// Az „utasítótörlés” (pushHistory) pillanataiban gyűjtjük a teljes projektet,
+// így véletlen bezárás/tisztítás után is visszaállítható az utolsó 5 lényeges
+// mentési pont. Külön kulcs, nem ütközik a folyamatos autosave-vel.
+const RB_KEY = "appmixer.rollback.v1";
+const RB_MAX = 5;
+
+interface RollbackPoint {
+  at: number;       // miliszekundum-időbélyeg
+  project: Project; // teljes projekt-pillanatkép
+}
+
+function loadRollbackPoints(): RollbackPoint[] {
+  try {
+    const raw = localStorage.getItem(RB_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw) as RollbackPoint[];
+    return Array.isArray(arr) ? arr.slice(0, RB_MAX) : [];
+  } catch {
+    return [];
+  }
+}
+
+function storeRollbackPoint(p: Project) {
+  if (typeof window === "undefined") return;
+  try {
+    const pts = loadRollbackPoints();
+    // ugyanaz a pillanat ne duplikálódjon (1 percen belül)
+    const last = pts[pts.length - 1];
+    if (last && JSON.stringify(last.project) === JSON.stringify(p)) return;
+    pts.push({ at: Date.now(), project: JSON.parse(JSON.stringify(p)) });
+    localStorage.setItem(RB_KEY, JSON.stringify(pts.slice(-RB_MAX)));
+  } catch { /* kvóta – a rollback pontok kényelmi funkciók, nem kritikusak */ }
+}
+
+export function getRollbackPoints(): RollbackPoint[] {
+  return loadRollbackPoints();
+}
+
 interface HistoryEntry {
   tracks: Track[];
   blocks: Block[];
@@ -84,20 +123,40 @@ function loadInitialProject(): Project {
           return parsed;
         }
       }
-    } catch {}
+    } catch { /* sérült mentett adat – elnyeljük */ }
   }
   return demoSpaceProject();
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Kvóta-hiba jelzése a UI felé (toast): a page.tsx iratkozik fel rá. */
+const autosaveListeners: ((error: Error) => void)[] = [];
+export function onAutosaveError(fn: (error: Error) => void): () => void {
+  autosaveListeners.push(fn);
+  return () => {
+    const i = autosaveListeners.indexOf(fn);
+    if (i >= 0) autosaveListeners.splice(i, 1);
+  };
+}
+let lastQuotaToast = 0;
+
 function scheduleAutosave(p: Project) {
   if (typeof window === "undefined") return;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(p));
-    } catch {
-      // kvóta túllépés – csendben elnyeljük, az export marad
+    } catch (err) {
+      // Kvóta túllépés: nem csendes – a felhasználó kap egy toastot (max 5 percenként),
+      // az export (JSON letöltés) és a felhőmentés továbbra is elérhető menekvési út.
+      const now = Date.now();
+      if (now - lastQuotaToast > 5 * 60_000) {
+        lastQuotaToast = now;
+        for (const fn of autosaveListeners) {
+          try { fn(err instanceof Error ? err : new Error(String(err))); } catch { /* sérült mentett adat – elnyeljük */ }
+        }
+      }
     }
   }, 900);
 }
@@ -346,9 +405,12 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   loadProject: (p, opts) => {
+    // Váltásnál (demó, import, felhő-betöltés) rögzítünk egy rollback pontot,
+    // hogy az előző munka bármikor visszaállítható legyen.
+    storeRollbackPoint(get().project);
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(p));
-    } catch {}
+    } catch { /* sérült mentett adat – elnyeljük */ }
     set({
       project: p,
       past: [],
@@ -442,7 +504,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     try {
       localStorage.setItem(LS_KEY, JSON.stringify(get().project));
       set({ dirty: false });
-    } catch {}
+    } catch { /* sérült mentett adat – elnyeljük */ }
   },
 }));
 

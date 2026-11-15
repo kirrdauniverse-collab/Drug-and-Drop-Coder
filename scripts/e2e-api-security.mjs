@@ -85,12 +85,49 @@ async function main() {
   });
   check("objektum-paraméter elutasítva → 400", res.status === 400);
 
-  // 7. GET lista → 200, tartalmazza az elemt
+  // 7. GET lista → 200; privát projekt NINCS a nyilvános listában (published=false default),
+  //   PATCH után viszont ott van. Az adatonto (data-öntés) sosem történik.
   res = await fetch(BASE);
   body = await res.json();
   check("GET lista 200", res.status === 200 && Array.isArray(body.projects));
-  check("lista tartalmazza a mentettet", body.projects.some((x) => x.id === p.id));
+  check("privát mentés NINCS a nyilvános listában", !body.projects.some((x) => x.id === p.id));
   check("lista NEM tartalmazza az adatot (nincs adatöntés)", !body.projects.some((x) => x.data));
+
+  // 7b. PATCH published=true token nélkül → 403
+  res = await fetch(`${BASE}/${p.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ published: true }),
+  });
+  check("PATCH token nélkül → 403", res.status === 403);
+
+  // 7c. PATCH published=true jó tokennel → 200, és a lista tartalmazza
+  res = await fetch(`${BASE}/${p.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "x-owner-token": token },
+    body: JSON.stringify({ published: true }),
+  });
+  check("PATCH published=true → 200", res.status === 200);
+  res = await fetch(BASE);
+  body = await res.json();
+  check("megosztott projekt a nyilvános listában", body.projects.some((x) => x.id === p.id));
+
+  // 7d. /mine: token alapú saját lista
+  res = await fetch(`${BASE}/mine`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tokens: [token] }),
+  });
+  body = await res.json();
+  check("saját lista tartalmazza a projektet (token alapján)", res.status === 200 && body.projects.some((x) => x.id === p.id));
+
+  // 7e. PATCH published=false → visszavesz a listából
+  res = await fetch(`${BASE}/${p.id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "x-owner-token": token },
+    body: JSON.stringify({ published: false }),
+  });
+  check("PATCH published=false → 200", res.status === 200);
 
   // 8. GET egy projekt → 200
   res = await fetch(`${BASE}/${p.id}`);

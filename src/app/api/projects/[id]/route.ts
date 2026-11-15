@@ -38,6 +38,43 @@ export async function GET(
   }
 }
 
+// PATCH /api/projects/[id] – megosztási állapot váltása (published), token-védve.
+// A PATCH nem érinti a projekt tartalmát, csak a listázási láthatóságot;
+// a ?project=<id> közvetlen link privát projekt esetén is működik.
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  if (!rateLimit(`patch:${clientIp(req)}`, 30, 60_000)) {
+    return fail(429, "rate_limited", "Túl sok kérés – próbáld újra egy perc múlva");
+  }
+  try {
+    const { id } = await params;
+    const existing = await db.savedProject.findUnique({ where: { id }, select: { id: true, ownerTokenHash: true } });
+    if (!existing) {
+      return fail(404, "not_found", "Nem található projekt ezzel az azonosítóval");
+    }
+    if (existing.ownerTokenHash) {
+      const provided = req.headers.get("x-owner-token");
+      if (!provided || hashOwnerToken(provided) !== existing.ownerTokenHash) {
+        return fail(403, "forbidden", "Ehhez a projekthez nincs megosztási jogosultságod");
+      }
+    }
+    let body: { published?: unknown } = {};
+    try {
+      body = (await req.json()) as { published?: unknown };
+    } catch {
+      return fail(400, "invalid_body", "Érvénytelen kérés-törzs");
+    }
+    const published = body?.published === true; // csak explicit true kapcsol be
+    await db.savedProject.update({ where: { id }, data: { published } });
+    return NextResponse.json({ ok: true, published });
+  } catch (err) {
+    console.error("PATCH /api/projects/[id] hiba:", err);
+    return fail(500, "server_error", "A megosztási állapot frissítése nem sikerült");
+  }
+}
+
 // DELETE /api/projects/[id] – projekt törlése (csak a tulajdonosi tokennel)
 export async function DELETE(
   req: NextRequest,

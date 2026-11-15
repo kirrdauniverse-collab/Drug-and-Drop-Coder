@@ -9,10 +9,13 @@ import { Preview } from "@/components/editor/Preview";
 import { HelpDialog, CloudDialog } from "@/components/editor/dialogs";
 import { createElement } from "react";
 import { blockIcon } from "@/components/editor/icons";
-import { useEditor } from "@/store/editor";
+import { useEditor, onAutosaveError } from "@/store/editor";
 import { useDrag } from "@/store/drag";
 import { getEngine } from "@/lib/engine";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { validateProjectData } from "@/lib/projectSchema";
+import type { Project } from "@/lib/types";
 import { LayoutGrid, Library as LibraryIcon, Settings2, MonitorPlay } from "lucide-react";
 
 const emptySubscribe = () => () => {};
@@ -48,6 +51,7 @@ export default function Home() {
   const [helpDismissed, setHelpDismissed] = useState(false);
   const [cloudOpen, setCloudOpen] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("timeline");
+  const { toast } = useToast();
 
   // Első látogatáskor magától felugrik a súgó (nem kell effect)
   const helpOpen = userHelpOpen || (firstVisit && !helpDismissed);
@@ -57,7 +61,7 @@ export default function Home() {
     } else {
       setUserHelpOpen(false);
       setHelpDismissed(true);
-      try { localStorage.setItem("appmixer.seen", "1"); } catch {}
+      try { localStorage.setItem("appmixer.seen", "1"); } catch { /* privát mód / letiltott tároló – elnyeljük */ }
     }
   }, []);
 
@@ -120,6 +124,51 @@ export default function Home() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Autosave kvóta-hiba → toast (C1 javítás): a böngésző-tároló megtelt,
+  // de a JSON-export és a felhőmentés mentőút.
+  useEffect(() => {
+    return onAutosaveError(() => {
+      toast({
+        title: "A böngésző-tároló megtelt",
+        description: "Az automatikus mentés most nem sikerült – ments JSON fájlba vagy a felhőbe, hogy ne vesszen el a munkád.",
+        variant: "destructive",
+      });
+    });
+  }, [toast]);
+
+  // Megosztási link (?project=<id>): induláskor a felhőből betöltjük az
+  // URL-ben megadott projektet (validálva). Ez a legkönnyebb módja annak,
+  // hogy valaki másnak elküldjük a saját művünket.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const id = url.searchParams.get("project");
+    if (!id || !/^[a-zA-Z0-9_-]{8,64}$/.test(id)) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/projects/${encodeURIComponent(id)}`);
+        const data = await res.json().catch(() => null);
+        const p = data?.project?.data as Project | undefined;
+        if (res.ok && p) {
+          const v = validateProjectData(p);
+          if (!v.ok) {
+            toast({ title: "A megosztott projekt sérült", description: `A betöltés elutasítva (${v.reason}).`, variant: "destructive" });
+            return;
+          }
+          useEditor.getState().setPlaying(false);
+          useEditor.getState().loadProject({ ...p, cloudId: id }, { silent: true });
+          toast({ title: "Megosztott projekt betöltve", description: `„${p.name}” a megosztási linkről.` });
+        } else {
+          const msg = (data as { error?: { message?: string } } | null)?.error?.message;
+          toast({ title: "A megosztott projekt nem elérhető", description: msg ?? "Nem található ilyen projekt.", variant: "destructive" });
+        }
+      } catch {
+        toast({ title: "A megosztott projekt nem elérhető", variant: "destructive" });
+      }
+    })();
+    // Csak induláskor fut – a query paraméter nem változik futás közben.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!mounted) {

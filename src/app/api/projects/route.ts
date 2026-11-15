@@ -12,10 +12,16 @@ function fail(status: number, code: string, message: string) {
   return NextResponse.json({ error: { code, message } }, { status });
 }
 
-// GET /api/projects – felhőprojektek listája (címek, nem tartalmak)
-export async function GET() {
+// GET /api/projects – felhőprojektek listája (címek, nem tartalmak).
+// Csak a megosztott (published) projektek szerepelnek: a privát mentések
+// nem kerülnek nyilvános listába, csak közvetlen ?project=<id> linken érhetők el.
+export async function GET(req: NextRequest) {
+  if (!rateLimit(`list:${clientIp(req)}`, 30, 60_000)) {
+    return fail(429, "rate_limited", "Túl sok listaletöltés rövid időn belül – próbáld újra egy perc múlva");
+  }
   try {
     const projects = await db.savedProject.findMany({
+      where: { published: true },
       orderBy: { updatedAt: "desc" },
       select: { id: true, name: true, updatedAt: true },
     });
@@ -59,11 +65,13 @@ export async function POST(req: NextRequest) {
           }
         }
         const ownerToken = providedToken ?? generateOwnerToken();
+        // A published (megosztási) állapot a mentéssel nem változik – külön
+        // PATCH hívással állítható csak (szintén token-védve).
         await db.savedProject.update({
           where: { id },
-          data: { name, data: serialized, ownerTokenHash: hashOwnerToken(ownerToken), updatedAt: new Date() },
+          data: { name, data: serialized, ownerTokenHash: hashOwnerToken(ownerToken), published: existing.published, updatedAt: new Date() },
         });
-        return NextResponse.json({ project: { id, name, updatedAt: new Date() }, ownerToken });
+        return NextResponse.json({ project: { id, name, updatedAt: new Date(), published: existing.published }, ownerToken });
       }
     }
 

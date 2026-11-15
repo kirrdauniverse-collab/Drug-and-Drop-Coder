@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Cloud, Trash2, Download, RefreshCw } from "lucide-react";
+import { Cloud, Trash2, Download, RefreshCw, Share2, Eye, EyeOff } from "lucide-react";
 import { useEditor } from "@/store/editor";
 import { useToast } from "@/hooks/use-toast";
 import type { Project } from "@/lib/types";
@@ -126,6 +126,14 @@ interface CloudProject {
   id: string;
   name: string;
   updatedAt: string;
+  published?: boolean;
+}
+
+// A megosztási link alapja: ?project=<id> az aktuális origin alatt
+function shareLinkFor(id: string): string {
+  const u = new URL(window.location.href);
+  u.search = `?project=${encodeURIComponent(id)}`;
+  return u.toString();
 }
 
 // A tulajdonosi tokenek helyi tárolója: { projectId: token }
@@ -159,22 +167,67 @@ export function CloudDialog({ open, onOpenChange }: { open: boolean; onOpenChang
   const [items, setItems] = useState<CloudProject[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
   const project = useEditor((s) => s.project);
   const setProject = useEditor((s) => s.loadProject);
   const { toast } = useToast();
 
+  // A megosztás váltás után a lista (published) frissül, és a linket bemutatjuk.
+  const toggleShare = async (id: string, publish: boolean) => {
+    setShareBusy(true);
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const myToken = tokenFor(id);
+      if (myToken) headers["x-owner-token"] = myToken;
+      const res = await fetch(`/api/projects/${id}`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({ published: publish }),
+      });
+      const data = await res.json().catch(() => null);
+      if (res.ok) {
+        if (publish) {
+          const link = shareLinkFor(id);
+          try {
+            await navigator.clipboard.writeText(link);
+            toast({ title: "Megosztás bekapcsolva", description: `A link a vágólapra került: ${link}` });
+          } catch {
+            toast({ title: "Megosztás bekapcsolva", description: `A megosztási link: ${link}` });
+          }
+        } else {
+          toast({ title: "Megosztás kikapcsolva", description: "A projekt többé nem szerepel a nyilvános listában. A korábbi linkek privát módban továbbra is működnek." });
+        }
+        await refresh();
+      } else {
+        const msg = (data as { error?: { message?: string } } | null)?.error?.message;
+        toast({ title: "A megosztási állapot nem módosítható", description: msg ?? "Ismeretlen hiba.", variant: "destructive" });
+      }
+    } catch (err) {
+      console.error("Megosztás-váltás hiba:", err);
+      toast({ title: "A megosztási állapot nem módosítható", variant: "destructive" });
+    }
+    setShareBusy(false);
+  };
+
   const refresh = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/projects");
+      // Saját projektek: a böngészőben tárolt tulajdonosi tokenekkel kérdezve
+      // (a nyilvános lista csak a megosztott projekteket mutatná).
+      const tokens = Object.values(loadTokens()).slice(0, 20);
+      const res = await fetch("/api/projects/mine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tokens }),
+      });
       if (res.ok) {
         const data = await res.json();
         setItems(Array.isArray(data.projects) ? data.projects : []);
       } else {
-        console.error("Felhőlista hiba:", res.status);
+        console.error("Saját lista hiba:", res.status);
       }
     } catch (err) {
-      console.error("Felhőlista nem elérhető:", err);
+      console.error("Saját lista nem elérhető:", err);
     }
     setLoading(false);
   };
@@ -183,14 +236,20 @@ export function CloudDialog({ open, onOpenChange }: { open: boolean; onOpenChang
     if (!open) return;
     let cancelled = false;
     (async () => {
+      setLoading(true);
       try {
-        const res = await fetch("/api/projects");
+        const tokens = Object.values(loadTokens()).slice(0, 20);
+        const res = await fetch("/api/projects/mine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tokens }),
+        });
         if (res.ok) {
           const data = await res.json();
           if (!cancelled) setItems(Array.isArray(data.projects) ? data.projects : []);
         }
       } catch (err) {
-        console.error("Felhőlista nem elérhető:", err);
+        console.error("Saját lista nem elérhető:", err);
       }
       if (!cancelled) setLoading(false);
     })();
@@ -331,11 +390,28 @@ export function CloudDialog({ open, onOpenChange }: { open: boolean; onOpenChang
               {items.map((it) => (
                 <div key={it.id} className="flex items-center gap-2 px-3 py-2 border-b border-zinc-800/50 last:border-0">
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-zinc-200 truncate">{it.name}</div>
+                    <div className="text-xs font-semibold text-zinc-200 truncate">
+                      {it.name}
+                      {it.published && (
+                        <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-300/90 border border-emerald-500/40 rounded px-1 py-0.5 align-middle" title="A nyilvános megosztási listában szerepel">
+                          <Share2 className="size-2.5" /> MEGOSZTVA
+                        </span>
+                      )}
+                    </div>
                     <div className="text-[10px] text-zinc-500">
                       {new Date(it.updatedAt).toLocaleString("hu-HU")}
                     </div>
                   </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className={`size-7 ${it.published ? "text-emerald-400 hover:text-emerald-300" : "text-zinc-500 hover:text-emerald-400"}`}
+                    onClick={() => void toggleShare(it.id, !it.published)}
+                    disabled={busy || shareBusy}
+                    title={it.published ? "Megosztás kikapcsolása (a link privát marad)" : "Megosztás: link a vágólapra, a projekt a nyilvános listába kerül"}
+                  >
+                    {it.published ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  </Button>
                   <Button size="sm" variant="outline" className="h-7 text-[11px] bg-zinc-800 border-zinc-700 hover:bg-zinc-700" onClick={() => void load(it.id)} disabled={busy}>
                     Betöltés
                   </Button>
