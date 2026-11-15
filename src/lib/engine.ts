@@ -4,6 +4,7 @@ import { audioEngine } from "./audio";
 import { drawSprite, drawShipSprite, drawMeteorSprite, drawStarSprite, drawCloudSprite, shade } from "./sprites";
 import { drawBgPreset, bgPresetLabel } from "./backgrounds";
 import { createGameMode, type GameCtx, type GameMode } from "./games";
+import { hitTest, boardWin as boardWinPure, stepJumpPhysics, sanitizeVarName, type PlatformDef } from "./engine-logic";
 
 // ===== Futtató motor =====
 // Amikor a léptetőfej elér egy blokkot, a motor "kilövi" annak hatását:
@@ -110,7 +111,7 @@ function readHS(board: string): { name: string; score: number }[] {
 }
 
 function writeHS(board: string, rows: { name: string; score: number }[]) {
-  try { localStorage.setItem(HS_KEY + board, JSON.stringify(rows)); } catch {}
+  try { localStorage.setItem(HS_KEY + board, JSON.stringify(rows)); } catch { /* hibát szándékosan elnyeljük */ }
 }
 
 export class RuntimeEngine {
@@ -919,7 +920,7 @@ export class RuntimeEngine {
         this.activeChoice = {
           question: String(pr.question ?? "Válassz!"),
           options: opts.length > 0 ? opts : ["A", "B"],
-          variable: String(pr.variable ?? "valasztas"),
+          variable: sanitizeVarName(pr.variable) ?? "valasztas",
           target: Number(pr.target ?? 0),
           until: performance.now() + Math.max(b.length * p.tempoMs, 9000),
         };
@@ -944,7 +945,7 @@ export class RuntimeEngine {
           subtitle: String(pr.subtitle ?? ""),
           options: opts.length > 0 ? opts : ["Indítás"],
           targets,
-          variable: String(pr.variable ?? "menu"),
+          variable: sanitizeVarName(pr.variable) ?? "menu",
         };
         this.emit(b.start, `Főmenü: ${this.menu.title} (${this.menu.options.join(" / ")})`, "logic");
         break;
@@ -952,7 +953,7 @@ export class RuntimeEngine {
       case "highscore": {
         const boardName = String(pr.board ?? "appmixer");
         if (String(pr.mode ?? "save") === "reset") {
-          try { localStorage.removeItem(HS_KEY + boardName); } catch {}
+          try { localStorage.removeItem(HS_KEY + boardName); } catch { /* hibát szándékosan elnyeljük */ }
           this.emit(b.start, `Toplista törölve: ${boardName}`, "data");
           break;
         }
@@ -976,7 +977,7 @@ export class RuntimeEngine {
           size, winLen, vsAI,
           grid: new Array(size * size).fill(0),
           turn: 1, over: false, winner: 0,
-          variable: String(pr.variable ?? "tabla"),
+          variable: sanitizeVarName(pr.variable) ?? "tabla",
           target: Number(pr.target ?? -1),
           lastMove: -1, aiAt: 0,
         };
@@ -1046,7 +1047,7 @@ export class RuntimeEngine {
         break;
       }
       case "counter": {
-        const name = String(pr.variable ?? "kor");
+        const name = sanitizeVarName(pr.variable) ?? "kor";
         this.vars[name] = (this.vars[name] ?? 0) + Number(pr.delta ?? 1);
         this.emit(b.start, `${name} = ${this.vars[name]}`, "data");
         break;
@@ -1137,13 +1138,13 @@ export class RuntimeEngine {
         break;
       }
       case "setvar": {
-        const name = b.typeId === "data.lives" ? "lives" : String(pr.variable ?? "score");
+        const name = b.typeId === "data.lives" ? "lives" : sanitizeVarName(pr.variable) ?? "score";
         this.vars[name] = Number(pr.value ?? 0);
         this.emit(b.start, `${name} = ${pr.value}`, "data");
         break;
       }
       case "save": {
-        try { localStorage.setItem(VARS_KEY, JSON.stringify(this.vars)); } catch {}
+        try { localStorage.setItem(VARS_KEY, JSON.stringify(this.vars)); } catch { /* hibát szándékosan elnyeljük */ }
         this.emit(b.start, "Változók elmentve a böngészőbe", "data");
         break;
       }
@@ -1152,7 +1153,7 @@ export class RuntimeEngine {
           const raw = localStorage.getItem(VARS_KEY);
           if (raw) this.vars = { ...this.vars, ...JSON.parse(raw) };
           this.emit(b.start, "Változók betöltve", "data");
-        } catch {}
+        } catch { /* hibát szándékosan elnyeljük */ }
         break;
       }
       case "customImage": {
@@ -1311,38 +1312,25 @@ export class RuntimeEngine {
 
         if (this.kbMode === "jump") {
           // Ugrálás: vízszintes irányítás + gravitáció + platformokra való leérkezés
-          const px = (dx * this.keyboardSpeed * dt / W) * 100;
-          const newX = Math.max(2, Math.min(98, player.x + px));
-          player.vy += 1400 * dt; // gravitáció
-          let newY = player.y + (player.vy * dt / H) * 100;
-          player.onGround = false;
-          // Platformokra érkezés (csak lefelé esés közben)
-          if (player.vy > 0) {
-            for (const plat of this.entities.filter((e) => e.role === "platform")) {
-              const pl = (plat.x / 100) * W - plat.w / 2;
-              const pr2 = (plat.x / 100) * W + plat.w / 2;
-              const pt = (plat.y / 100) * H - plat.h / 2;
-              const footOld = (player.y / 100) * H + player.size * 0.45;
-              const footNew = (newY / 100) * H + player.size * 0.45;
-              const pxw = (newX / 100) * W;
-              if (footOld <= pt + 6 && footNew >= pt && pxw > pl - 8 && pxw < pr2 + 8) {
-                newY = ((pt - player.size * 0.45) / H) * 100;
-                player.vy = 0;
-                player.onGround = true;
-              }
-            }
-          }
-          // Padló (képernyő alja) is platformként működik
-          if (newY > 94) { newY = 94; player.vy = 0; player.onGround = true; }
-          // Ugrás (él-vezérelt lenyomásra)
-          if (this.jumpQueued && player.onGround) {
-            player.vy = -this.jumpForce;
+          // (a számítás a tiszta stepJumpPhysics-ben él – unit-tesztelhető, l. engine-logic.ts)
+          const platforms: PlatformDef[] = this.entities
+            .filter((e) => e.role === "platform")
+            .map((e) => ({ xPct: e.x, yPct: e.y, w: e.w, h: e.h }));
+          const st = stepJumpPhysics(
+            { xPct: player.x, yPct: player.y, vy: player.vy, onGround: player.onGround, size: player.size },
+            dx, this.keyboardSpeed, dt, this.jumpForce, this.jumpQueued, platforms,
+          );
+          const newX = st.xPct;
+          const newY = st.yPct;
+          player.vy = st.vy;
+          player.onGround = st.onGround;
+          if (st.jumped) {
             audioEngine.playSfx("sfx.jump", 0.5);
             this.jumpQueued = false;
           }
           if (!player.onGround) this.jumpQueued = false;
           player.x = newX;
-          player.y = Math.max(4, newY);
+          player.y = newY;
         } else if (this.kbMode === "horizontal") {
           player.x += (dx * this.keyboardSpeed * dt / W) * 100;
           player.x = Math.max(2, Math.min(98, player.x));
@@ -1665,10 +1653,11 @@ export class RuntimeEngine {
     b.grid[cell] = p;
     b.lastMove = cell;
     audioEngine.playSfx(p === 1 ? "sfx.click" : "sfx.pop", 0.5);
+    const varName = sanitizeVarName(b.variable) ?? "board_result";
     if (this.boardWin(cell, p)) {
       b.over = true;
       b.winner = p;
-      this.vars[b.variable] = p;
+      this.vars[varName] = p;
       if (p === 1) {
         this.vars["score"] = (this.vars["score"] ?? 0) + 100;
         audioEngine.playSfx("sfx.win", 0.8);
@@ -1681,7 +1670,7 @@ export class RuntimeEngine {
     } else if (b.grid.every((v) => v !== 0)) {
       b.over = true;
       b.winner = 3;
-      this.vars[b.variable] = 3;
+      this.vars[varName] = 3;
       this.vars["score"] = (this.vars["score"] ?? 0) + 25;
       audioEngine.playSfx("sfx.chime", 0.7);
       this.emit(this.step, "Döntetlen! +25 pont", "logic");
@@ -1691,27 +1680,11 @@ export class RuntimeEngine {
     }
   }
 
-  // Győztes sor ellenőrzése a (cell) mező körül
+  // Győztes sor ellenőrzése a (cell) mező körül – tiszta logikára delegálva
   private boardWin(cell: number, p: number): boolean {
     const b = this.board;
     if (!b) return false;
-    const size = b.size, wl = b.winLen;
-    const r = Math.floor(cell / size), c = cell % size;
-    for (const [dr, dc] of [[0, 1], [1, 0], [1, 1], [1, -1]] as const) {
-      let cnt = 1;
-      for (let s = 1; s < wl; s++) {
-        const rr = r + dr * s, cc = c + dc * s;
-        if (rr < 0 || rr >= size || cc < 0 || cc >= size || b.grid[rr * size + cc] !== p) break;
-        cnt++;
-      }
-      for (let s = 1; s < wl; s++) {
-        const rr = r - dr * s, cc = c - dc * s;
-        if (rr < 0 || rr >= size || cc < 0 || cc >= size || b.grid[rr * size + cc] !== p) break;
-        cnt++;
-      }
-      if (cnt >= wl) return true;
-    }
-    return false;
+    return boardWinPure(b.grid, b.size, b.winLen, cell, p);
   }
 
   // Egyszerű, de okos gép: azonnal nyer, ha tud; blokkol, ha kell;
@@ -1764,10 +1737,8 @@ export class RuntimeEngine {
   }
 
   private hit(a: Entity, b: Entity, factor: number): boolean {
-    const ax = (a.x / 100) * W, ay = (a.y / 100) * H;
-    const bx = (b.x / 100) * W, by = (b.y / 100) * H;
-    const r = ((a.size + b.size) / 2) * factor;
-    return Math.hypot(ax - bx, ay - by) < r;
+    // Tiszta logikára delegálva (unit-tesztelhető, l. engine-logic.ts)
+    return hitTest(a, b, factor);
   }
 
   // ---------- Rajzolás ----------
