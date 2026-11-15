@@ -29,7 +29,6 @@ export function Timeline() {
   const toggleMute = useEditor((s) => s.toggleMute);
   const toggleSolo = useEditor((s) => s.toggleSolo);
   const setTrackVolume = useEditor((s) => s.setTrackVolume);
-  const removeTrack = useEditor((s) => s.removeTrack);
   const renameTrack = useEditor((s) => s.renameTrack);
   const addTrack = useEditor((s) => s.addTrack);
   const deleteBlock = useEditor((s) => s.deleteBlock);

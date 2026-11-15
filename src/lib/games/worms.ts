@@ -155,7 +155,7 @@ export class WormsGame implements GameMode {
     this.ctx.sfx("sfx.drumroll", 0.35);
   }
 
-  private fire(now: number) {
+  private fire(_now: number) {
     const w = this.curWorm();
     // Megjegyzés: a "charging" guard NEM kell ide – a gép (aiAct) közvetlenül
     // hívja töltés nélkül, az emberi útvonalak maguk gondoskodnak róla.

@@ -9,11 +9,9 @@ import { blockIcon } from "./icons";
 import { drawSprite } from "@/lib/sprites";
 import { drawBgPreset, BG_W, BG_H, THUMB_STARS } from "@/lib/backgrounds";
 import { audioEngine } from "@/lib/audio";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, Trash2, Play, Search, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 // A meteor-alak determinisztikus "poly"ja az előnézethez
 const THUMB_POLY = [1, 0.85, 1.1, 0.9, 1.05, 0.95, 1.1, 0.88];

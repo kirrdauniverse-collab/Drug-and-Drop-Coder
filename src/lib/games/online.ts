@@ -135,7 +135,7 @@ export class OnlineGame implements GameMode {
     this.ctx.addScore(won ? 100 : 20);
   }
 
-  click(xPct: number, yPct: number, now: number) {
+  click(xPct: number, yPct: number, _now: number) {
     const px = (xPct / 100) * GW;
     const py = (yPct / 100) * GH;
 

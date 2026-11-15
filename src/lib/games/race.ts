@@ -300,7 +300,7 @@ export class RaceGame implements GameMode {
     ctx.restore();
   }
 
-  private drawCar(ctx: CanvasRenderingContext2D, car: Car, now: number) {
+  private drawCar(ctx: CanvasRenderingContext2D, car: Car, _now: number) {
     ctx.save();
     ctx.translate(car.x, car.y);
     ctx.rotate(car.heading);

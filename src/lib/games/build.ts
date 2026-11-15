@@ -4,7 +4,7 @@
 // Pontot kapsz minden lerakott elemért, a kész cél nagy bónuszt hoz.
 
 import type { GameCtx, GameMode } from "./base";
-import { GW, GH, clamp, inRect } from "./base";
+import { GW, GH, inRect } from "./base";
 
 type PieceId = "fal" | "topo" | "ajto" | "ablak" | "fa" | "ut" | "lampa" | "viral" | "torol";
 
@@ -287,7 +287,7 @@ export class BuildGame implements GameMode {
     }
   }
 
-  update(dt: number, now: number) {
+  update(dt: number, _now: number) {
     if (this.over) return;
     // 1–8 választás
     const keys = this.ctx.keys;
