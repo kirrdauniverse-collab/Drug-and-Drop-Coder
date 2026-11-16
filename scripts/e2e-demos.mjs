@@ -12,12 +12,12 @@ import { execFileSync } from "node:child_process";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const DEMOS = [
-  { label: "Űr-támadás", menu: "Demó: Űr-támadás" },
-  { label: "Bunkyó kaland", menu: "Demó: Bunkyó kaland" },
-  { label: "Galaxi őrség", menu: "Demó: Galaxi őrség" },
+  { label: "Űr-támadás", menu: "Demó: Űr-támadás", wrapRestart: true },
+  { label: "Bunkyó kaland", menu: "Demó: Bunkyó kaland", wrapRestart: true },
+  { label: "Galaxi őrség", menu: "Demó: Galaxi őrség", wrapRestart: true },
   { label: "Amőba párbaj", menu: "Demó: Amőba párbaj" },
   { label: "A Sárkány kardja", menu: "Demó: A Sárkány kardja" },
-  { label: "Célbalövölde", menu: "Demó: Célbalövölde" },
+  { label: "Célbalövölde", menu: "Demó: Célbalövölde", wrapRestart: true },
   { label: "Bunker 3000 (FPS)", menu: "Demó: Bunker 3000" },
   { label: "Gokart nagydíj", menu: "Demó: Gokart nagydíj" },
   { label: "Osztott képernyős verseny", menu: "Demó: Osztott képernyős verseny" },
@@ -82,9 +82,41 @@ for (const demo of DEMOS) {
   ab("click", `@${m[1]}`);
   ab("wait", "1200");
 
-  // 2) Lejátszás indítása (Szóköz-parancs: a motor él-e?)
-  ab("press", "Space");
-  ab("wait", "2500");
+  // 2a) Lejátszás indítása a TopBar ▶ gombjával (title="Lejátszás (Szóköz)").
+  //     A globális Szóköz-kezelő (page.tsx) BUTTON/menüelem-fókusznál nem indít
+  //     lejátszást, hanem az elemet nyomja meg – a menüelem-kattintás után
+  //     ott marad a fókusz, ezért a Space megbízhatatlan. A ▶ gomb kattintás
+  //     fókuszfüggetlen.
+  {
+    const ps = ab("snapshot", "-i", "-c");
+    const pb = ps.match(/button "Lejátszás \(Szóköz\)"[^\n]*ref=(e\d+)/);
+    if (pb) {
+      ab("click", `@${pb[1]}`);
+    } else {
+      // Fallback: fókusz levétele a body-ra, majd Space
+      ab("eval", "document.body.focus && document.activeElement && document.activeElement.blur && document.activeElement.blur()");
+      ab("press", "Space");
+    }
+    ab("wait", "2500");
+  }
+
+  // 2b) Ha a demó főmenüréteggel indít (ui.menu a 0. lépésen), a léptető
+  //     addig áll, míg a canvason rá nem kattintanak az "Indítás" gombra.
+  //     A wrap-restart teszthez a játékmenetnek ténylegesen futnia kell.
+  //     Szintetikus dispatchEvent nem éri el a React onClick-jét, ezért valódi
+  //     CDP-egérrel kattintunk a fő canvas menügombjára (x=50%, y≈0.47H).
+  if (demo.wrapRestart) {
+    const rectRaw = ab("eval", "(() => { const c = [...document.querySelectorAll('canvas')].sort((a,b)=>b.width*b.height-a.width*a.height)[0]; if (!c) return 'null'; const r = c.getBoundingClientRect(); return Math.round(r.x + r.width*0.5) + ',' + Math.round(r.y + r.height*0.47); })()");
+    const [mx, my] = String(rectRaw ?? "").replace(/[^0-9,]/g, "").split(",");
+    if (/^\d+,\d+$/.test(`${mx},${my}`) && mx && my) {
+      ab("mouse", "move", String(mx), String(my));
+      ab("mouse", "down", "left");
+      ab("mouse", "up", "left");
+    } else {
+      check("menü-kattintás koordináta megtalálva", false, `(${rectRaw})`);
+    }
+    ab("wait", "800");
+  }
 
   // 3) Ellenőrzés: a léptetőfej mozog-e (playStep növekedett a DOM-ban)
   //    A TopBar állapotszáma "NN/SS" formátumban követi a léptetőt.
@@ -100,6 +132,37 @@ for (const demo of DEMOS) {
   const logCount = parseInt(String(logRaw ?? "0").replace(/["\\s]/g, ""), 10) || 0;
   const hasLog = logCount >= 2;
   check("eseménynapló jelez blokkfuttatást", hasLog, `(napló-bejegyzés: ${logCount})`);
+
+  // 4b) Determinisztikus körváltási-restart teszt (wrapRestart demók).
+  //     A demó loop=true, a 31. lépésen logic.jump → 6: a kör ~10-11 mp alatt
+  //     magától fordul körbe. A HIBÁS motor a 6-os lépés (input-ablakok + hajó)
+  //     blokkjait a fireStep utáni step++-szal átugrotta, így a hajó a következő
+  //     körben egyetlen bemenetre sem reagált. A wrap után az eseménynaplóban
+  //     ÚJRA meg kell jelenniük az input-blokk futtatásoknak.
+  if (demo.wrapRestart) {
+    // Rugalmas várakozás: legfeljebb 20 mp-ig pollolunk 2 mp-enként, míg a
+    // naplóban meg nem jelenik a körváltás utáni input-újraaktiválás. (A fix
+    // időzítés lassabb gépeken/első fordításnál versenyhelyzetet adott.)
+    const PROBE_JS = "(() => { const el = document.querySelector('[aria-live=polite]'); const t = document.querySelector('header .font-mono'); const txt = el ? el.textContent : ''; return JSON.stringify({ kb: /Billentyű-irányítás (aktív|újr)/.test(txt) || /Űrhajó \\(játékos\\)/.test(txt), step: t ? t.textContent : '' }); })()";
+    let probe = { kb: false, step: "?" };
+    const deadline = Date.now() + Number(process.env.WRAP_MS ?? 20000);
+    while (Date.now() < deadline) {
+      ab("wait", "2000");
+      try {
+        probe = JSON.parse(String(ab("eval", PROBE_JS) ?? "{}"));
+      } catch { /* értelmezési hiba – újrapróbálkozás */ }
+      if (probe.kb) break;
+    }
+    const after = ab("eval", "(() => { const el = document.querySelector('[aria-live=polite]'); return el ? el.textContent : ''; })()");
+    const txt = String(after ?? "");
+    const kb = /Billentyű-irányítás (aktív|újr)/.test(txt);
+    const ptr = /Egér\/ujj követése (aktív|újr)/.test(txt);
+    const clk = /Kattintás-esemény (aktív|újr)/.test(txt);
+    // Játékos-sprite új spawnja a 6-os lépésen (Űr-támadás: Űrhajó, Bunkyó: cica, Célbalövölde: ágyú/satellite)
+    const ship = /Űrhajó \(játékos\)/.test(txt) || /játékos/.test(txt) && /(?:kész|static\))/.test(txt);
+    const reactivated = (kb || ptr || clk) && ship;
+    check("körváltás után input-blokkok újra lefutnak", reactivated, `(step: ${probe.step}, kb=${kb}, egér=${ptr}, katt=${clk}, játékos=${ship})`);
+  }
 
   // 5) Megállítás – tiszta állapot a következő demóhoz
   ab("press", "Escape");
