@@ -646,7 +646,19 @@ export class RuntimeEngine {
     if (this.playing && !this.paused && !this.gameOver && !this.stepPaused(now)) {
       const p = this.getProject();
       while (now >= this.stepDeadline) {
+        const before = this.step;
         this.fireStep(this.step, p);
+        // Ha egy blokk ugrást kezdeményezett (logic.jump / menü-választás / játék-vég
+        // célugrása), a léptető a célponton álljon meg: a célpont blokkjai a KÖVETKEZŐ
+        // ciklusban futnak le, ne ugorjuk át őket egy azonnali step++-szal.
+        // Ez volt az Űr-támadás demó "halál után nem reagál a hajó" hibájának egyik
+        // gyökere: a kör végén a logic.jump 31→6 után a step++ a 6-os lépés
+        // (input-ablakok + hajó spawn) fölé lépett, így a következő körben már
+        // sem billentyű, sem egér nem irányította a hajót.
+        if (this.step !== before) {
+          this.stepDeadline = Math.max(this.stepDeadline, performance.now() + p.tempoMs);
+          break;
+        }
         this.step++;
         this.stepDeadline += p.tempoMs;
         if (this.step >= p.stepCount) {
@@ -1206,6 +1218,40 @@ export class RuntimeEngine {
     this.onStep(this.step);
   }
 
+  // Újranyitja a bemeneti engedélyeket (keyboard/pointer/click) a fromStep-ben
+  // aktív input-blokkokból. A tiszta play() a blokkfuttatáskor nyitja őket;
+  // a restartAt viszont a régi, már lejárt engedélyeket örökölte volna – ezért
+  // nem reagált a hajó az első halál utáni újrakezdésnél semmilyen bemenetre.
+  private reopenInputWindows(fromStep: number) {
+    const p = this.getProject();
+    const now = performance.now();
+    for (const b of p.blocks) {
+      const def = getBlockType(b.typeId);
+      if (!def) continue;
+      // Csak a fromStep-ben aktív input-blokkok: start <= fromStep < start + length.
+      // Az újranyitott ablak hossza a blokk fromStep-től megmaradó lépésszáma.
+      if (b.start > fromStep || b.start + b.length <= fromStep) continue;
+      const pr = this.mergedParams(b);
+      const remaining = Math.max(1, b.start + b.length - fromStep);
+      if (def.kind === "keyboard") {
+        this.keyboardUntil = now + remaining * p.tempoMs;
+        this.keyboardSpeed = Number(pr.speed ?? 220);
+        const mode = String(pr.mode ?? "free");
+        this.kbMode = mode === "jump" ? "jump" : mode === "horizontal" ? "horizontal" : "free";
+        this.jumpForce = Number(pr.jump ?? 620);
+        this.emit(fromStep, `Billentyű-irányítás újraaktív (${remaining} lépésre)`, "info");
+      } else if (def.kind === "pointer") {
+        this.pointerUntil = now + remaining * p.tempoMs;
+        this.pointerSmooth = Math.max(5, Math.min(100, Number(pr.smooth ?? 70)));
+        this.emit(fromStep, "Egér/ujj követése újraaktív", "info");
+      } else if (def.kind === "click") {
+        this.clickUntil = now + remaining * p.tempoMs;
+        this.clickMode = String(pr.mode ?? "shoot");
+        this.emit(fromStep, `Kattintás-esemény újraaktív (${this.clickMode})`, "info");
+      }
+    }
+  }
+
   // Tiszta újraindítás egy adott lépésre (pl. pontlista → főmenü a játék végén)
   private restartAt(step: number) {
     this.entities = [];
@@ -1220,6 +1266,7 @@ export class RuntimeEngine {
     this.playing = true;
     this.paused = false;
     this.jumpTo(step);
+    this.reopenInputWindows(step);
   }
 
   // Toplista megjelenítése (és opcionálisan az aktuális pont mentése)
@@ -1566,8 +1613,16 @@ export class RuntimeEngine {
     if (this.bolt && performance.now() > this.bolt.until) this.bolt = null;
     if (this.activeChoice && performance.now() > this.activeChoice.until) this.activeChoice = null;
 
-    // Lejárt pontlista réteg letakarítása
-    if (this.hs && now > this.hs.until) this.hs = null;
+    // Lejárt pontlista réteg letakarítása; ha van célugrása (target), a lejáratkor
+    // is induljon el az újrakezdés – ne csak kattintásra. Enélkül, ha a játékos
+    // nem kattintott a pontlistára, a játék örökre a lejárt rétegen ragadt volna
+    // (a "halál után nem reagál a hajó" tünet másik fele).
+    if (this.hs && now > this.hs.until) {
+      const t = this.hs.target;
+      this.hs = null;
+      if (t >= 0 && (!this.playing || this.gameOver)) this.restartAt(t);
+      else if (t >= 0) { this.jumpTo(t); this.stepDeadline = now; }
+    }
 
     // Gép lépése a táblás játékban (kis "gondolkodási" idő után)
     if (this.board && this.board.vsAI && !this.board.over && this.board.turn === 2 && now >= this.board.aiAt) {
