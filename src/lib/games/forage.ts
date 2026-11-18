@@ -57,12 +57,12 @@ export class ForageGame implements GameMode {
     for(const f of this.finds){if(f.found)continue;const x=f.x/100*GW,y=f.y/100*GH;const bob=Math.sin(now/400+f.phase)*2;
       ctx.save();ctx.translate(x,y+bob);
       if(f.kind==="mushroom")drawSprite(ctx,"mushroom",{size:26,color:f.poisonous?"#dc2626":"#f59e0b",now,id:f.phase,poly:[]});
-      else if(f.kind==="berry")drawSprite(ctx,"berry",{size:20,color:"#7c3aed",now,id:f.phase,poly:[]});
+      else if(f.kind==="berry")drawSprite(ctx,"gem",{size:20,color:"#7c3aed",now,id:f.phase,poly:[]});
       else drawSprite(ctx,"flower",{size:21,color:"#4ade80",now,id:f.phase,poly:[]});
       ctx.restore();
     }
     // játékos jelölő
-    ctx.save();ctx.translate(this.px/100*GW,this.py/100*GH);drawSprite(ctx,"person",{size:34,color:"#38bdf8",now,id:3,poly:[]});ctx.restore();
+    ctx.save();ctx.translate(this.px/100*GW,this.py/100*GH);drawSprite(ctx,"robot",{size:34,color:"#38bdf8",now,id:3,poly:[]});ctx.restore();
     // fejléc és cél
     ctx.fillStyle="rgba(9,20,12,.78)";ctx.fillRect(0,0,GW,48);
     ctx.fillStyle="#d9f99d";ctx.font="800 22px Geist,system-ui,sans-serif";ctx.textAlign="left";ctx.textBaseline="middle";ctx.fillText("ERDEI BARANGOLÁS",18,24);
