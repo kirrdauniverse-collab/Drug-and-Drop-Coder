@@ -183,7 +183,7 @@ export const SPRITE_CATALOG: SpriteCatalogEntry[] = [
   // ---------- DELUXE GALAGA-JELLEGŰ ARCADE ----------
   { id:"gfx.sprite.alien",style:"alien",label:"Űrlény-raj",description:"Klasszikus arcade ellenség; hullámok és formációk látványeleme.",icon:"Bug",defaults:{style:"alien",role:"enemy",move:"wave",speed:70,x:50,y:18,size:34,color:"#a3e635",sticky:false}},
   { id:"gfx.sprite.asteroid",style:"asteroid",label:"Aszteroida",description:"Űrszikla meteorviharhoz és akadálykerülős bónuszpályához.",icon:"CircleDot",defaults:{style:"asteroid",role:"enemy",move:"fall",speed:100,x:50,y:10,size:42,color:"#a8a29e",spin:true,sticky:false}},
-  { id:"gfx.sprite.laser",style:"laser",label:"Lézersugár",description:"Fénylő lövedék vagy függőleges lézerakadály sci-fi játékokhoz.",icon:"Zap",defaults:{style:"laser",role:"projectile",move:"rise",speed:260,x:50,y:80,size:24,color:"#22d3ee",sticky:false}},
+  { id:"gfx.sprite.laser",style:"laser",label:"Lézersugár",description:"Fénylő lövedék vagy függőleges lézerakadály sci-fi játékokhoz.",icon:"Zap",defaults:{style:"laser",role:"enemy",move:"rise",speed:260,x:50,y:80,size:24,color:"#22d3ee",sticky:false}},
   { id:"gfx.sprite.explosion",style:"explosion",label:"Robbanás",description:"Rövid, pulzáló robbanás-effekt ellenségek és aszteroidák kilövésekor.",icon:"Bomb",defaults:{style:"explosion",role:"deco",move:"static",x:50,y:50,size:48,color:"#fb923c",sticky:false}},
   { id:"gfx.sprite.power-core",style:"powerCore",label:"Energiabónusz",description:"Ritka fejlesztés vagy extra energia begyűjthető jelölője.",icon:"BatteryCharging",defaults:{style:"powerCore",role:"pickup",move:"fall",speed:45,x:50,y:30,size:28,value:50,color:"#38bdf8",sticky:false}},
   { id:"gfx.sprite.satchel",style:"satchel",label:"Pénzes zsák",description:"Nagyobb pénzjutalom vagy vásárlási kredit begyűjthető jelölője.",icon:"Wallet",defaults:{style:"satchel",role:"pickup",move:"fall",speed:32,x:50,y:30,size:30,value:100,color:"#a16207",sticky:false}},
@@ -1300,6 +1300,20 @@ export const BLOCK_TYPES: BlockTypeDef[] = [
     params: [
       num("items", "Találatok száma a pályán", 14, 6, 28, 1, "Erdő"),
       num("goal", "Begyűjtendő ehető termések", 8, 3, 20, 1, "Küldetés"),
+      num("target", "Végeztével ugorjon erre a lépésre (-1 = nincs)", -1, -1, 128, 1, "Vég"),
+    ],
+  },
+
+  {
+    id: "game.galaga",
+    label: "Star Raid (Deluxe Galaga ihlette)",
+    description: "Arcade űrlövölde ellenséghullámokkal, pénz- és fegyverbónuszokkal, négy hullámonként bolttal, meteorvihar és memória bónuszpályával. A/D vagy nyilak: mozgás, SPACE: lövés.",
+    category: "ui",
+    icon: "Rocket",
+    kind: "gamemode",
+    defaultLength: 2,
+    group: "Játékmódok",
+    params: [
       num("target", "Végeztével ugorjon erre a lépésre (-1 = nincs)", -1, -1, 128, 1, "Vég"),
     ],
   },
