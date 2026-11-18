@@ -37,7 +37,7 @@ export class ForageGame implements GameMode {
     best.found=true;
     if(best.poisonous){this.ctx.loseLife();this.ctx.sfx("sfx.hurt",.7);this.say("Vigyázat! Mérgező gombát találtál: "+best.name,now);this.ctx.emit("Mérgező találat: "+best.name,"warn");}
     else{this.inventory.push(best.name);this.score+=best.points;this.ctx.addScore(best.points);this.ctx.sfx("sfx.powerup",.55);this.ctx.burst(best.x/100*GW,best.y/100*GH,12,"#a3e635",130);this.say("Megtaláltad: "+best.name+" (+"+best.points+" pont)",now);this.ctx.emit("Begyűjtve: "+best.name,"logic");}
-    if(this.inventory.length>=this.goal){this.over=true;this.say("Sikeres gyűjtögetés! Megvan a napi zsákmány.",now);setTimeout(()=>{this.done=true;this.ctx.finish(true,"Sikeres erdei barangolás! "+this.inventory.length+" termést gyűjtöttél.",this.target);},650);}
+    if(this.inventory.length>=this.goal){this.over=true;this.done=true;this.say("Sikeres gyűjtögetés! Megvan a napi zsákmány.",now);this.ctx.finish(true,"Sikeres erdei barangolás! "+this.inventory.length+" termést gyűjtöttél.",this.target);}
   }
   private say(s:string,now:number){this.message=s;this.messageAt=now;}
   update(dt:number,now:number){
