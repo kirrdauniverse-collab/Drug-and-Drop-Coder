@@ -69,6 +69,9 @@ export const SHAPE_STYLES = [
   // tárgyak
   "car", "bomb", "coin", "balloon", "key", "potion", "shield", "sword", "crown",
   "cake", "donut", "gift", "chest", "door", "house", "flag", "castle",
+  "magnifier", "fingerprint", "evidence", "document", "camera", "policeTape", "footprint", "suspect",
+  "questionBlock", "brick", "pipe", "goomba", "shell", "spring", "coinStack",
+  "alien", "asteroid", "laser", "explosion", "powerCore", "satchel",
 ] as const;
 export type ShapeStyle = (typeof SHAPE_STYLES)[number];
 

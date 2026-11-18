@@ -52,6 +52,9 @@ export const BG_PRESETS: BgPresetDef[] = [
   { value: "rainbow", label: "Szivárványos ég", icon: "Rainbow" },
   { value: "lava", label: "Lávafolyam", icon: "Flame" },
   { value: "checker", label: "Sakktábla", icon: "LayoutGrid" },
+  { value: "noir", label: "Noir nyomozás", icon: "Fingerprint" },
+  { value: "comic", label: "Képregényes város", icon: "PanelsTopLeft" },
+  { value: "pixel", label: "Pixel arcade", icon: "Grid3X3" },
 ];
 
 export function bgPresetLabel(v: string): string {
@@ -579,6 +582,10 @@ export function drawBgPreset(ctx: CanvasRenderingContext2D, preset: string, now:
       }
       break;
     }
+
+    case "noir": { const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#111827");g.addColorStop(1,"#292524");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);ctx.fillStyle="rgba(250,204,21,.12)";ctx.beginPath();ctx.moveTo(W*.72,0);ctx.lineTo(W*.92,0);ctx.lineTo(W*.58,H);ctx.lineTo(W*.38,H);ctx.fill();ctx.fillStyle="#0b1120";for(let i=0;i<7;i++){const x=i*155-20,h=150+(i%3)*65;ctx.fillRect(x,H-h,110,h);ctx.fillStyle="rgba(250,204,21,.35)";for(let y=H-h+22;y<H-20;y+=32)for(let xx=x+15;xx<x+100;xx+=28)if((i+y+xx)%3)ctx.fillRect(xx,y,8,12);ctx.fillStyle="#0b1120";}ctx.strokeStyle="rgba(226,232,240,.22)";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,H*.8);ctx.lineTo(W,H*.8);ctx.stroke();break; }
+    case "comic": { ctx.fillStyle="#7dd3fc";ctx.fillRect(0,0,W,H);ctx.fillStyle="#fde047";ctx.beginPath();ctx.arc(W*.78,H*.2,58,0,Math.PI*2);ctx.fill();for(let i=0;i<8;i++){const x=i*132-20,h=120+(i%4)*48;ctx.fillStyle=["#ef4444","#2563eb","#f97316","#16a34a"][i%4];ctx.fillRect(x,H-h,112,h);ctx.strokeStyle="#111827";ctx.lineWidth=5;ctx.strokeRect(x,H-h,112,h);ctx.fillStyle="#fef3c7";for(let y=H-h+18;y<H-12;y+=28)for(let xx=x+14;xx<x+100;xx+=25)ctx.fillRect(xx,y,12,15);}ctx.fillStyle="#111827";ctx.fillRect(0,H-18,W,18);break; }
+    case "pixel": { const cols=["#09090b","#172554","#1d4ed8","#38bdf8"];for(let y=0;y<H;y+=30)for(let x=0;x<W;x+=30){const n=(Math.floor(x/30)*7+Math.floor(y/30)*13)%11;ctx.fillStyle=cols[n%cols.length];ctx.fillRect(x,y,30,30);}for(const st of stars.slice(0,70)){ctx.fillStyle="#f8fafc";ctx.fillRect(Math.floor(st.x/6)*6,Math.floor(st.y/6)*6,3,3);}ctx.fillStyle="#facc15";ctx.fillRect(0,H-24,W,24);break; }
     default: {
       ctx.fillStyle = "#09090f";
       ctx.fillRect(0, 0, W, H);

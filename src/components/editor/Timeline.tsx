@@ -127,6 +127,17 @@ export function Timeline() {
             // grafikánál láthatóság, logikánál pedig be/ki kapcsoló.
             const isAudioTrack = track.category === "sound" || track.category === "custom";
             const isGraphicsTrack = track.category === "graphics";
+            // Az átfedő blokkok külön függőleges sávba kerülnek, hogy mindegyik kiválasztható legyen.
+            const rowBlocks = project.blocks.filter((b) => b.trackId === track.id);
+            const laneEnds: number[] = [];
+            const laneById = new Map<string, number>();
+            for (const item of [...rowBlocks].sort((a, b) => a.start - b.start || a.id.localeCompare(b.id))) {
+              let lane = laneEnds.findIndex((end) => end <= item.start);
+              if (lane < 0) lane = laneEnds.length;
+              laneEnds[lane] = item.start + item.length;
+              laneById.set(item.id, lane);
+            }
+            const laneCount = Math.max(1, laneEnds.length);
             return (
               <div key={track.id} className="flex" style={{ height: ROW_H }}>
                 {/* Sáv fejléc (ragadós balra) */}
@@ -206,9 +217,7 @@ export function Timeline() {
                   }}
                 >
                   {/* Blokkok */}
-                  {project.blocks
-                    .filter((b) => b.trackId === track.id)
-                    .map((b) => {
+                  {rowBlocks.map((b) => {
                       const def = resolveTypeDef(b.typeId, project.assets);
                       if (!def) return null;
                       const catMeta = CATEGORY_META[def.category];
@@ -224,6 +233,8 @@ export function Timeline() {
                           chipClass={catMeta.chipClass}
                           start={b.start}
                           length={b.length}
+                          lane={laneById.get(b.id) ?? 0}
+                          laneCount={laneCount}
                           selected={selected}
                           onSelect={() => selectBlock(b.id)}
                           onDelete={() => deleteBlock(b.id)}
@@ -310,7 +321,7 @@ function TrackNameInput({ track, onRename }: { track: Track; onRename: (id: stri
 
 // ===== Blokk chip a rácsban =====
 function BlockChip({
-  blockId, label, iconName, icon, chipClass, start, length, selected, onSelect, onDelete, onDuplicate,
+  blockId, label, iconName, icon, chipClass, start, length, lane, laneCount, selected, onSelect, onDelete, onDuplicate,
 }: {
   blockId: string;
   label: string;
@@ -319,6 +330,8 @@ function BlockChip({
   chipClass: string;
   start: number;
   length: number;
+  lane: number;
+  laneCount: number;
   selected: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -351,8 +364,8 @@ function BlockChip({
 
   return (
     <div
-      className={`group absolute top-1 bottom-1 rounded-md border flex items-center gap-1 px-1.5 cursor-grab active:cursor-grabbing select-none touch-none overflow-hidden ${chipClass} ${selected ? "ring-2 ring-amber-400 z-10" : "hover:brightness-125"}`}
-      style={{ left: start * CELL_W + 2, width: length * CELL_W - 4 }}
+      className={`group absolute rounded-md border flex items-center gap-1 px-1.5 cursor-grab active:cursor-grabbing select-none touch-none overflow-hidden ${chipClass} ${selected ? "ring-2 ring-amber-400 z-20" : "hover:brightness-125"}`}
+      style={{ left: start * CELL_W + 2, width: length * CELL_W - 4, top: `calc(${(lane / laneCount) * 100}% + 1px)`, height: `calc(${100 / laneCount}% - 2px)` }}
       onPointerDown={(e) => {
         if (resizing) return;
         if ((e.target as HTMLElement).closest("[data-resize]")) return;
