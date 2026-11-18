@@ -162,6 +162,31 @@ export const SPRITE_CATALOG: SpriteCatalogEntry[] = [
   { id: "gfx.sprite.rat", style: "ghost", label: "Patkány", description: "Kis járőröző ellenség sötét folyosókhoz.", icon: "Bug", defaults: { style: "ghost", role: "enemy", move: "patrol", speed: 62, x: 30, y: 88, size: 22, color: "#a1a1aa", sticky: true } },
   { id: "gfx.sprite.torch", style: "sun", label: "Fáklya", description: "Meleg fényű dísz a sötét pályákhoz.", icon: "Flame", defaults: { style: "sun", role: "deco", move: "static", x: 12, y: 45, size: 28, color: "#fb923c", sticky: true } },
   { id: "gfx.sprite.exit-flag", style: "flag", label: "Menekülési pont", description: "Jól látható céljelző a pálya végén.", icon: "Flag", defaults: { style: "flag", role: "pickup", move: "static", x: 92, y: 86, size: 34, value: 50, color: "#22c55e", sticky: true } },
+
+  // ---------- NYOMOZÓS / NOIR ----------
+  { id:"gfx.sprite.magnifier",style:"magnifier",label:"Nagyító",description:"Vizsgálható nyomok és rejtett részletek kiemelésére.",icon:"Search",defaults:{style:"magnifier",role:"pickup",move:"static",x:42,y:54,size:30,value:10,color:"#cbd5e1",sticky:true}},
+  { id:"gfx.sprite.fingerprint",style:"fingerprint",label:"Ujjlenyomat",description:"Bűnügyi helyszín bizonyítéka; nyomozós játékok kelléke.",icon:"Fingerprint",defaults:{style:"fingerprint",role:"pickup",move:"static",x:50,y:50,size:32,value:15,color:"#bae6fd",sticky:true}},
+  { id:"gfx.sprite.evidence",style:"evidence",label:"Bizonyítékjelölő",description:"Sorszámozott bizonyíték vagy begyűjthető nyom.",icon:"FileCheck",defaults:{style:"evidence",role:"pickup",move:"static",x:56,y:58,size:30,value:20,color:"#facc15",sticky:true}},
+  { id:"gfx.sprite.document",style:"document",label:"Akták / dokumentum",description:"Levelek, akták, jegyzőkönyvek és olvasható nyomok kelléke.",icon:"FileText",defaults:{style:"document",role:"pickup",move:"static",x:60,y:50,size:34,value:10,color:"#93c5fd",sticky:true}},
+  { id:"gfx.sprite.camera",style:"camera",label:"Megfigyelő kamera",description:"Biztonsági kamera vagy fényképezőgép egy helyszínen.",icon:"Camera",defaults:{style:"camera",role:"deco",move:"static",x:78,y:20,size:34,color:"#64748b",sticky:true}},
+  { id:"gfx.sprite.police-tape",style:"policeTape",label:"Rendőrségi szalag",description:"Helyszín lezárása, nyomozós jelenetek kelléke.",icon:"ShieldAlert",defaults:{style:"policeTape",role:"deco",move:"static",x:50,y:35,size:80,color:"#facc15",sticky:true}},
+  { id:"gfx.sprite.footprint",style:"footprint",label:"Lábnyomok",description:"Követhető lábnyomok és nyomok az útvonalon.",icon:"Footprints",defaults:{style:"footprint",role:"pickup",move:"static",x:38,y:68,size:28,value:5,color:"#cbd5e1",sticky:true}},
+  { id:"gfx.sprite.suspect",style:"suspect",label:"Gyanúsított",description:"Képregényes szereplő-ikon kihallgatáshoz vagy párbeszédhez.",icon:"UserRound",defaults:{style:"suspect",role:"deco",move:"static",x:70,y:72,size:48,color:"#475569",sticky:true}},
+  // ---------- PLATFORMER / MARIO-JELLEG ----------
+  { id:"gfx.sprite.question-block",style:"questionBlock",label:"Kérdőjeles blokk",description:"Klasszikus meglepetésblokk platformjátékokhoz.",icon:"SquareDashed",defaults:{style:"questionBlock",role:"platform",move:"static",x:50,y:55,size:42,height:38,color:"#f59e0b",sticky:true}},
+  { id:"gfx.sprite.brick",style:"brick",label:"Téglafal",description:"Téglamintás platform vagy akadály látványeleme.",icon:"BrickWall",defaults:{style:"brick",role:"platform",move:"static",x:35,y:78,size:62,height:34,color:"#b45309",sticky:true}},
+  { id:"gfx.sprite.pipe",style:"pipe",label:"Zöld cső",description:"Cső vagy titkos átjáró platformer pályákhoz.",icon:"Cylinder",defaults:{style:"pipe",role:"platform",move:"static",x:76,y:82,size:58,height:60,color:"#16a34a",sticky:true}},
+  { id:"gfx.sprite.goomba",style:"goomba",label:"Gombaellenfél",description:"Járőröző, klasszikus platformer-ellenfél.",icon:"Bug",defaults:{style:"goomba",role:"enemy",move:"patrol",speed:48,x:55,y:84,size:34,color:"#92400e",sticky:true}},
+  { id:"gfx.sprite.shell",style:"shell",label:"Teknőspáncél",description:"Gurítható páncél látványeleme platformjátékokhoz.",icon:"Circle",defaults:{style:"shell",role:"enemy",move:"drift",speed:110,x:48,y:82,size:34,color:"#22c55e",sticky:true}},
+  { id:"gfx.sprite.spring",style:"spring",label:"Rugó",description:"Ugrófelület és rugós csapda jelölője.",icon:"MoveUp",defaults:{style:"spring",role:"platform",move:"static",x:50,y:88,size:34,height:18,color:"#e879f9",sticky:true}},
+  { id:"gfx.sprite.coin-stack",style:"coinStack",label:"Érmekupac",description:"Több érme egyetlen látványos gyűjthető objektumban.",icon:"Coins",defaults:{style:"coinStack",role:"pickup",move:"static",x:50,y:58,size:32,value:30,color:"#fbbf24",sticky:true}},
+  // ---------- DELUXE GALAGA-JELLEGŰ ARCADE ----------
+  { id:"gfx.sprite.alien",style:"alien",label:"Űrlény-raj",description:"Klasszikus arcade ellenség; hullámok és formációk látványeleme.",icon:"Bug",defaults:{style:"alien",role:"enemy",move:"wave",speed:70,x:50,y:18,size:34,color:"#a3e635",sticky:false}},
+  { id:"gfx.sprite.asteroid",style:"asteroid",label:"Aszteroida",description:"Űrszikla meteorviharhoz és akadálykerülős bónuszpályához.",icon:"CircleDot",defaults:{style:"asteroid",role:"enemy",move:"fall",speed:100,x:50,y:10,size:42,color:"#a8a29e",spin:true,sticky:false}},
+  { id:"gfx.sprite.laser",style:"laser",label:"Lézersugár",description:"Fénylő lövedék vagy függőleges lézerakadály sci-fi játékokhoz.",icon:"Zap",defaults:{style:"laser",role:"projectile",move:"rise",speed:260,x:50,y:80,size:24,color:"#22d3ee",sticky:false}},
+  { id:"gfx.sprite.explosion",style:"explosion",label:"Robbanás",description:"Rövid, pulzáló robbanás-effekt ellenségek és aszteroidák kilövésekor.",icon:"Bomb",defaults:{style:"explosion",role:"deco",move:"static",x:50,y:50,size:48,color:"#fb923c",sticky:false}},
+  { id:"gfx.sprite.power-core",style:"powerCore",label:"Energiabónusz",description:"Ritka fejlesztés vagy extra energia begyűjthető jelölője.",icon:"BatteryCharging",defaults:{style:"powerCore",role:"pickup",move:"fall",speed:45,x:50,y:30,size:28,value:50,color:"#38bdf8",sticky:false}},
+  { id:"gfx.sprite.satchel",style:"satchel",label:"Pénzes zsák",description:"Nagyobb pénzjutalom vagy vásárlási kredit begyűjthető jelölője.",icon:"Wallet",defaults:{style:"satchel",role:"pickup",move:"fall",speed:32,x:50,y:30,size:30,value:100,color:"#a16207",sticky:false}},
 ];
 
 // A "Stílus" legördülő a katalógusból épül fel (a platform a kocka stílust használja)
@@ -255,6 +280,9 @@ export const BLOCK_TYPES: BlockTypeDef[] = [
   bgBlock("rainbow", "Szivárványos ég", "Szivárvány felhőkkel – mesés, boldog jelenetekhez.", "Rainbow"),
   bgBlock("lava", "Lávafolyam", "Izzó lávarepedésekkel tűzveszélyes táj – vulkánjátékokhoz.", "Flame"),
   bgBlock("checker", "Sakktábla", "Klasszikus sakktábla minta – puzzle és logikai játékokhoz.", "LayoutGrid"),
+  bgBlock("noir", "Noir nyomozás", "Sötét, esős városi hangulat nyomozós és krimis játékokhoz.", "Fingerprint"),
+  bgBlock("comic", "Képregényes város", "Élénk színek, vastag kontúrok és rajzolt városi háttér.", "PanelsTopLeft"),
+  bgBlock("pixel", "Pixel arcade", "Retro pixeles csillagmező klasszikus arcade játékokhoz.", "Grid3X3"),
   {
     id: "gfx.bg.color",
     label: "Háttér (saját színnel)",
