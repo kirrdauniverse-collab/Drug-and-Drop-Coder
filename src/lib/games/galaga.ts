@@ -51,7 +51,7 @@ export class GalagaGame implements GameMode {
     }
     if(this.message&&now-this.messageTime>4000)this.message="";
   }
-  private hit(now:number){if(this.invuln>0)return;if(this.armour>0){this.armour--;this.invuln=1.4;this.say("A páncél felfogta a találatot!",now);return;}this.lives--;this.ctx.loseLife();this.invuln=1.8;this.weapon=Math.max(1,this.weapon-1);this.ctx.sfx("sfx.hurt",.7);if(this.lives<=0){this.done=true;this.phase="done";this.ctx.finish(false,"A csillagvadász megsemmisült.",this.target);}}
+  private hit(now:number){if(this.invuln>0)return;if(this.armour>0){this.armour--;this.invuln=1.4;this.say("A páncél felfogta a találatot!",now);return;}this.lives--;const gameOver=this.ctx.loseLife();this.invuln=1.8;this.weapon=Math.max(1,this.weapon-1);this.ctx.sfx("sfx.hurt",.7);if(gameOver||this.lives<=0){this.done=true;this.phase="done";}}
   click(x:number,y:number,now:number){
     const px=x/100*GW,py=y/100*GH;
     if(this.phase==="shop"){for(let i=0;i<this.shopItems.length;i++){const yy=170+i*72;if(inRect(px,py,250,yy,460,54)){const item=this.shopItems[i];if(this.cash<item.cost){this.say("Nincs elég kredited!",now);return;}this.cash-=item.cost;if(item.kind==="weapon")this.weapon=Math.min(4,this.weapon+1);if(item.kind==="speed")this.playerSpeed=Math.min(500,this.playerSpeed+35);if(item.kind==="armour")this.armour=Math.min(4,this.armour+1);if(item.kind==="life")this.lives++;this.say("Megvásárolva: "+item.name,now);return;}}
