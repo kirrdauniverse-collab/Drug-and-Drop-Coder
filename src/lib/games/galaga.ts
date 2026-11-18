@@ -20,13 +20,13 @@ export class GalagaGame implements GameMode {
   constructor(p:Record<string,string|number|boolean>,ctx:GameCtx){this.ctx=ctx;this.target=Number(p.target??-1);this.lives=ctx.lives();this.startWave();ctx.emit("STAR RAID: indul az első ellenséges hullám!","logic");}
   isDone(){return this.done;}
   private say(s:string,now:number){this.message=s;this.messageTime=now;}
-  private startWave(){
+  private startWave(now=performance.now()){
     this.phase="combat";this.enemies=[];this.shots=[];this.drops=[];this.spawnClock=0;
     // Minden ötödik hullám végén főellenség várja a játékost.
     if(this.wave>0&&this.wave%5===0){
       const hp=12+this.level*2;
       this.enemies.push({x:GW/2,y:112,vx:72+this.level*2,hp,maxHp:hp,size:92,phase:0,boss:true});
-      this.say("FŐELLENSÉG KÖZELEDIK! Célozz a közepére!",performance.now());
+      this.say("FŐELLENSÉG KÖZELEDIK! Célozz a közepére!",now);
       return;
     }
     const n=Math.min(18,5+this.level*2);
@@ -53,8 +53,7 @@ export class GalagaGame implements GameMode {
       }
       for(const s of this.shots)s.y+=s.vy*dt;this.shots=this.shots.filter(s=>s.y>-20&&s.y<GH+20);
       for(const s of this.shots){if(!s.friendly)continue;const hit=this.enemies.findIndex(e=>Math.hypot(e.x-s.x,e.y-s.y)<e.size*.55+5);if(hit>=0){const e=this.enemies[hit];e.hp--;s.y=-100;if(e.hp<=0){this.enemies.splice(hit,1);this.score+=100;this.ctx.addScore(100);if(e.boss){
-              this.drops.push({x:e.x-22,y:e.y,vy:90,kind:"cash",value:150});
-              this.drops.push({x:e.x+22,y:e.y,vy:100,kind:"weapon",value:1});
+              this.cash+=150;this.weapon=Math.min(4,this.weapon+1);
               this.ctx.addScore(500);this.say("FŐELLENSÉG LEGYŐZVE! +150 kredit és fegyverfejlesztés",now);
             }else if(Math.random()<.42){
               const roll=Math.random();
