@@ -854,12 +854,24 @@ export class RuntimeEngine {
       }
       case "text": {
         this.removeBySrc(b.id);
+        const textPositions: Record<string, { x: number; y: number; align: "left" | "center" | "right" }> = {
+          "top-left": { x: 5, y: 8, align: "left" },
+          "top-center": { x: 50, y: 8, align: "center" },
+          "top-right": { x: 95, y: 8, align: "right" },
+          "middle-left": { x: 5, y: 50, align: "left" },
+          "center": { x: 50, y: 50, align: "center" },
+          "middle-right": { x: 95, y: 50, align: "right" },
+          "bottom-left": { x: 5, y: 92, align: "left" },
+          "bottom-center": { x: 50, y: 92, align: "center" },
+          "bottom-right": { x: 95, y: 92, align: "right" },
+        };
+        const preset = textPositions[String(pr.position ?? "custom")];
         this.spawn({
           kind: "text", role: "text",
-          x: Number(pr.x ?? 50), y: Number(pr.y ?? 20),
+          x: preset?.x ?? Number(pr.x ?? 50), y: preset?.y ?? Number(pr.y ?? 20),
           text: String(pr.text ?? "Szöveg"), fontSize: Number(pr.size ?? 28),
           color: String(pr.color ?? "#ffffff"),
-          align: String(pr.align ?? "center"),
+          align: preset?.align ?? String(pr.align ?? "center"),
           fade: Boolean(pr.fade ?? false),
           sticky: Boolean(pr.sticky), life: pr.sticky ? null : b.length * p.tempoMs + 400,
           size: Number(pr.size ?? 28),
