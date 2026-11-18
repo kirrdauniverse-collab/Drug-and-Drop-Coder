@@ -72,7 +72,8 @@ interface MenuState {
   title: string;
   subtitle: string;
   options: string[];
-  targets: number[];   // gordonként hova ugorjon (-1 = csak folytatás)
+  targets: number[];   // gombonkénti cél-lépés
+  actions: string[];   // gombonkénti beépített művelet
   variable: string;
 }
 
@@ -159,6 +160,8 @@ export class RuntimeEngine {
     question: string; options: string[]; variable: string; target: number; until: number;
   } | null = null;
   private menu: MenuState | null = null;
+  private settingsOpen = false;
+  private settingsMuted = false;
   private hs: HighscoreState | null = null;
   private board: BoardState | null = null;
   // Teljes képernyős játékmód (FPS, verseny, féregcsata, építős, kaland, online párbaj)
@@ -261,6 +264,8 @@ export class RuntimeEngine {
     this.weather = null;
     this.bolt = null;
     this.menu = null;
+    this.settingsOpen = false;
+    this.settingsMuted = false;
     this.hs = null;
     this.board = null;
     this.invulnUntil = 0;
@@ -410,19 +415,46 @@ export class RuntimeEngine {
     const now = performance.now();
     // 1) Főmenü gombok – a léptető addig áll, míg választasz
     if (this.menu) {
-      const rects = this.menuButtonRects();
       const px = (xPct / 100) * W;
       const py = (yPct / 100) * H;
+      if (this.settingsOpen) {
+        if (px >= W * 0.28 && px <= W * 0.72 && py >= H * 0.43 && py <= H * 0.57) {
+          this.settingsMuted = !this.settingsMuted;
+          audioEngine.setMasterVolume(this.settingsMuted ? 0 : this.getProject().masterVolume);
+          this.emit(this.step, this.settingsMuted ? "Hang kikapcsolva" : "Hang visszakapcsolva", "info");
+        } else if (py >= H * 0.62 && py <= H * 0.76) {
+          this.settingsOpen = false;
+        }
+        return;
+      }
+      const rects = this.menuButtonRects();
       for (let i = 0; i < rects.length; i++) {
         const r = rects[i];
         if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) {
           const m = this.menu;
-          this.menu = null;
+          const action = m.actions[i] ?? "jump";
           this.vars[m.variable] = i + 1;
           audioEngine.playSfx("sfx.click", 0.8);
-          this.emit(this.step, `Menü: „${m.options[i]}” (${m.variable} = ${i + 1})`, "logic");
+          this.emit(this.step, `Menü: „${m.options[i]}” – ${action}`, "logic");
+          if (action === "save") {
+            try { localStorage.setItem(VARS_KEY, JSON.stringify(this.vars)); this.emit(this.step, "Játékállás-változók elmentve", "data"); }
+            catch { this.emit(this.step, "A mentés nem sikerült (böngészőtárhely)", "warn"); }
+            return;
+          }
+          if (action === "load") {
+            try { const raw = localStorage.getItem(VARS_KEY); if (raw) this.vars = { ...this.vars, ...JSON.parse(raw) }; this.emit(this.step, "Játékállás-változók betöltve", "data"); }
+            catch { this.emit(this.step, "A betöltés nem sikerült", "warn"); }
+            return;
+          }
+          if (action === "settings") { this.settingsOpen = true; return; }
+          if (action === "quit") {
+            this.menu = null; this.playing = false; this.paused = false; this.finished = "lose";
+            this.finishLabel = "Kilépés a játékból"; this.onGameOver(this.vars["score"] ?? 0); return;
+          }
+          this.menu = null;
+          if (action === "restart") { this.restartAt(0); return; }
           const t = m.targets[i] ?? -1;
-          if (t >= 0) this.jumpTo(t);
+          if (action === "jump" && t >= 0) this.jumpTo(t);
           else this.stepDeadline = now;
           return;
         }
@@ -957,6 +989,7 @@ export class RuntimeEngine {
           subtitle: String(pr.subtitle ?? ""),
           options: opts.length > 0 ? opts : ["Indítás"],
           targets,
+          actions: [1, 2, 3, 4].map((n) => String(pr[`action${n}`] ?? "jump")),
           variable: sanitizeVarName(pr.variable) ?? "menu",
         };
         this.emit(b.start, `Főmenü: ${this.menu.title} (${this.menu.options.join(" / ")})`, "logic");
@@ -1959,7 +1992,7 @@ export class RuntimeEngine {
 
     // Rétegek: táblás játék → főmenü → pontlista (a pontlista legfelül)
     if (this.board) this.drawBoard(ctx, now);
-    if (this.menu) this.drawMenu(ctx, now);
+    if (this.menu) { this.drawMenu(ctx, now); if (this.settingsOpen) this.drawMenuSettings(ctx); }
     if (this.hs) this.drawHighscore(ctx);
 
     // Üres állapot
@@ -2082,6 +2115,22 @@ export class RuntimeEngine {
     ctx.fillStyle = "#71717a";
     ctx.font = "500 17px Geist, system-ui, sans-serif";
     ctx.fillText("Kattints a kiválasztott gombra", W / 2, H * 0.92);
+  }
+
+  private drawMenuSettings(ctx: CanvasRenderingContext2D) {
+    ctx.fillStyle = "rgba(0,0,0,0.72)";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#18181b";
+    ctx.strokeStyle = "#fbbf24";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.roundRect(W * 0.25, H * 0.25, W * 0.5, H * 0.52, 18); ctx.fill(); ctx.stroke();
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#fbbf24"; ctx.font = "800 34px Geist, system-ui, sans-serif";
+    ctx.fillText("BEÁLLÍTÁSOK", W / 2, H * 0.34);
+    ctx.fillStyle = "#f4f4f5"; ctx.font = "700 22px Geist, system-ui, sans-serif";
+    ctx.fillText(this.settingsMuted ? "Hang: KI  ·  kattints a visszakapcsoláshoz" : "Hang: BE  ·  kattints a némításhoz", W / 2, H * 0.5);
+    ctx.fillStyle = "#a3a3a3"; ctx.font = "600 19px Geist, system-ui, sans-serif";
+    ctx.fillText("VISSZA A MENÜBE", W / 2, H * 0.68);
   }
 
   private drawHighscore(ctx: CanvasRenderingContext2D) {
