@@ -62,7 +62,7 @@ export class GalagaGame implements GameMode {
             }
             this.ctx.burst(e.x,e.y,e.boss?36:12,e.boss?"#c084fc":"#fb923c",e.boss?230:150);}}}
       for(const s of this.shots){if(s.friendly)continue;if(Math.abs(s.x-this.player)<24&&s.y>GH-95&&this.invuln<=0){this.hit(now);s.y=GH+50;}}
-      for(const d of this.drops){d.y+=d.vy*dt;if(Math.abs(d.x-this.player)<30&&d.y>GH-105&&d.y<GH-45){if(d.kind==="cash"){this.cash+=d.value;this.say("+"+d.value+" kredit",now);}else if(d.kind==="weapon"){this.weapon=Math.min(4,this.weapon+1);this.say("Fegyverfejlesztés!",now);}else if(d.kind==="speed"){this.playerSpeed=Math.min(500,this.playerSpeed+25);this.say("Sebességnövelés!",now);}else if(d.kind==="armour")this.armour=Math.min(4,this.armour+1);else this.lives++;this.ctx.sfx("sfx.powerup",.6);d.y=GH+100;}}
+      for(const d of this.drops){d.y+=d.vy*dt;if(Math.abs(d.x-this.player)<30&&d.y>GH-105&&d.y<GH-45){if(d.kind==="cash"){this.cash+=d.value;this.say("+"+d.value+" kredit",now);}else if(d.kind==="weapon"){this.weapon=Math.min(4,this.weapon+1);this.say("Fegyverfejlesztés!",now);}else if(d.kind==="speed"){this.playerSpeed=Math.min(500,this.playerSpeed+25);this.say("Sebességnövelés!",now);}else if(d.kind==="armour"){this.armour=Math.min(4,this.armour+1);this.say("Páncél +1",now);}else this.addLife();this.ctx.sfx("sfx.powerup",.6);d.y=GH+100;}}
       this.drops=this.drops.filter(d=>d.y<GH+30);this.invuln=Math.max(0,this.invuln-dt);
       if(this.enemies.length===0)this.nextStage(now);
     }else if(this.phase==="meteor"){
@@ -75,10 +75,11 @@ export class GalagaGame implements GameMode {
     }
     if(this.message&&now-this.messageTime>4000)this.message="";
   }
+  private addLife(){this.lives++;this.ctx.vars["lives"]=(this.ctx.vars["lives"]??(this.lives-1))+1;}
   private hit(now:number){if(this.invuln>0)return;if(this.armour>0){this.armour--;this.invuln=1.4;this.say("A páncél felfogta a találatot!",now);return;}this.lives--;const gameOver=this.ctx.loseLife();this.invuln=1.8;this.weapon=Math.max(1,this.weapon-1);this.ctx.sfx("sfx.hurt",.7);if(gameOver||this.lives<=0){this.done=true;this.phase="done";}}
   click(x:number,y:number,now:number){
     const px=x/100*GW,py=y/100*GH;
-    if(this.phase==="shop"){for(let i=0;i<this.shopItems.length;i++){const yy=170+i*72;if(inRect(px,py,250,yy,460,54)){const item=this.shopItems[i];if(this.cash<item.cost){this.say("Nincs elég kredited!",now);return;}this.cash-=item.cost;if(item.kind==="weapon")this.weapon=Math.min(4,this.weapon+1);if(item.kind==="speed")this.playerSpeed=Math.min(500,this.playerSpeed+35);if(item.kind==="armour")this.armour=Math.min(4,this.armour+1);if(item.kind==="life")this.lives++;this.say("Megvásárolva: "+item.name,now);return;}}
+    if(this.phase==="shop"){for(let i=0;i<this.shopItems.length;i++){const yy=170+i*72;if(inRect(px,py,250,yy,460,54)){const item=this.shopItems[i];if(this.cash<item.cost){this.say("Nincs elég kredited!",now);return;}this.cash-=item.cost;if(item.kind==="weapon")this.weapon=Math.min(4,this.weapon+1);if(item.kind==="speed")this.playerSpeed=Math.min(500,this.playerSpeed+35);if(item.kind==="armour")this.armour=Math.min(4,this.armour+1);if(item.kind==="life")this.addLife();this.say("Megvásárolva: "+item.name,now);return;}}
       if(inRect(px,py,360,475,240,46)){if(this.bonusAfterShop)this.startBonus(now);else this.startWave();}return;}
     if(this.phase==="memory"&&this.memoryWait<=0){const col=Math.floor((px-220)/130),row=Math.floor((py-150)/112),i=row*4+col;if(col>=0&&col<4&&row>=0&&row<2&&i>=0&&i<8&&!this.memoryMatched.has(i)&&!this.memoryOpen.includes(i)){this.memoryOpen.push(i);if(this.memoryOpen.length===2)this.memoryWait=.7;}}
   }
@@ -89,7 +90,7 @@ export class GalagaGame implements GameMode {
       if(this.phase==="meteor"){for(const r of this.rocks){ctx.save();ctx.translate(r.x,r.y);ctx.rotate(now/900+r.phase);drawSprite(ctx,"asteroid",{size:r.r*2,color:"#a8a29e",now,id:r.phase});ctx.restore();}}
       if(this.phase==="combat"){const boss=this.enemies.find(e=>e.boss);if(boss){ctx.fillStyle="rgba(15,23,42,.85)";ctx.fillRect(GW/2-190,58,380,14);ctx.fillStyle="#c084fc";ctx.fillRect(GW/2-188,60,376*(boss.hp/(boss.maxHp??boss.hp)),10);ctx.strokeStyle="#e9d5ff";ctx.lineWidth=1;ctx.strokeRect(GW/2-190,58,380,14);ctx.fillStyle="#f5d0fe";ctx.font="700 13px system-ui";ctx.textAlign="center";ctx.fillText("FŐELLENSÉG · "+boss.hp+" / "+boss.maxHp+" HP",GW/2,52);}}
       for(const s of this.shots){ctx.save();ctx.translate(s.x,s.y);drawSprite(ctx,"laser",{size:18,color:s.friendly?"#38bdf8":"#fb7185",now,id:s.y});ctx.restore();}
-      for(const d of this.drops){ctx.save();ctx.translate(d.x,d.y);drawSprite(ctx,d.kind==="cash"?"coin":d.kind==="weapon"?"powerCore":d.kind==="speed"?"bolt":"shield",{size:24,color:d.kind==="cash"?"#fbbf24":"#38bdf8",now,id:d.y});ctx.restore();}
+      for(const d of this.drops){ctx.save();ctx.translate(d.x,d.y);drawSprite(ctx,d.kind==="cash"?"coin":d.kind==="weapon"?"powerCore":d.kind==="speed"?"bolt":d.kind==="life"?"heart":"shield",{size:24,color:d.kind==="cash"?"#fbbf24":"#38bdf8",now,id:d.y});ctx.restore();}
       ctx.save();ctx.translate(this.player,GH-72);if(this.invuln<=0||Math.floor(now/90)%2===0)drawSprite(ctx,"ship",{size:42,color:"#38bdf8",now,id:1});ctx.restore();
     }
     if(this.phase==="shop"){ctx.fillStyle="rgba(4,10,30,.94)";ctx.fillRect(100,70,760,420);ctx.strokeStyle="#38bdf8";ctx.lineWidth=3;ctx.strokeRect(100,70,760,420);ctx.fillStyle="#e0f2fe";ctx.font="900 32px system-ui";ctx.textAlign="center";ctx.fillText("ŰRBOLT",480,120);ctx.font="18px system-ui";ctx.fillText("Kredit: "+this.cash,480,148);for(let i=0;i<this.shopItems.length;i++){const it=this.shopItems[i],yy=170+i*72;drawBtn(ctx,250,yy,460,54,it.name+"  –  "+it.cost+" kredit","#38bdf8",false,18);}drawBtn(ctx,360,475,240,46,"Tovább a következő hullámra","#a3e635",false,16);}
