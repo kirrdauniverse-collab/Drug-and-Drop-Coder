@@ -23,7 +23,7 @@ export class GalagaGame implements GameMode {
   private startWave(now=performance.now()){
     this.phase="combat";this.enemies=[];this.shots=[];this.drops=[];this.spawnClock=0;
     // Minden ötödik hullám végén főellenség várja a játékost.
-    if(this.wave>0&&this.wave%5===0){
+    if(this.wave>0&&this.wave%5===4){
       const hp=12+this.level*2;
       this.enemies.push({x:GW/2,y:112,vx:72+this.level*2,hp,maxHp:hp,size:92,phase:0,boss:true});
       this.say("FŐELLENSÉG KÖZELEDIK! Célozz a közepére!",now);
@@ -95,7 +95,7 @@ export class GalagaGame implements GameMode {
     }
     if(this.phase==="shop"){ctx.fillStyle="rgba(4,10,30,.94)";ctx.fillRect(100,70,760,420);ctx.strokeStyle="#38bdf8";ctx.lineWidth=3;ctx.strokeRect(100,70,760,420);ctx.fillStyle="#e0f2fe";ctx.font="900 32px system-ui";ctx.textAlign="center";ctx.fillText("ŰRBOLT",480,120);ctx.font="18px system-ui";ctx.fillText("Kredit: "+this.cash,480,148);for(let i=0;i<this.shopItems.length;i++){const it=this.shopItems[i],yy=170+i*72;drawBtn(ctx,250,yy,460,54,it.name+"  –  "+it.cost+" kredit","#38bdf8",false,18);}drawBtn(ctx,360,475,240,46,"Tovább a következő hullámra","#a3e635",false,16);}
     if(this.phase==="memory"){ctx.fillStyle="rgba(4,10,30,.94)";ctx.fillRect(130,80,700,410);ctx.fillStyle="#e0f2fe";ctx.font="900 28px system-ui";ctx.textAlign="center";ctx.fillText("MEMÓRIAÁLLOMÁS",480,120);ctx.font="16px system-ui";ctx.fillText("Idő: "+Math.ceil(this.memoryClock)+" mp · Párok: "+this.memoryMatched.size/2,480,140);for(let i=0;i<8;i++){const x=220+(i%4)*130,y=160+Math.floor(i/4)*112,open=this.memoryOpen.includes(i)||this.memoryMatched.has(i);drawBtn(ctx,x,y,100,82,open?["★","◆","●","✦"][this.memoryCards[i]]:"?",open?"#a3e635":"#818cf8",false,28);}}
-    ctx.fillStyle="rgba(3,7,18,.82)";ctx.fillRect(0,0,GW,46);ctx.fillStyle="#e0f2fe";ctx.font="700 17px system-ui";ctx.textAlign="left";ctx.fillText("STAR RAID  ·  Hullám "+this.wave,18,29);ctx.textAlign="right";ctx.fillText("Élet: "+this.lives+"   Páncél: "+this.armour+"   Fegyver: "+this.weapon+"   Kredit: "+this.cash,GW-18,29);
+    ctx.fillStyle="rgba(3,7,18,.82)";ctx.fillRect(0,0,GW,46);ctx.fillStyle="#e0f2fe";ctx.font="700 17px system-ui";ctx.textAlign="left";ctx.fillText("STAR RAID  ·  Hullám "+(this.wave+1),18,29);ctx.textAlign="right";ctx.fillText("Élet: "+this.lives+"   Páncél: "+this.armour+"   Fegyver: "+this.weapon+"   Kredit: "+this.cash,GW-18,29);
     if(this.message){ctx.fillStyle="rgba(3,7,18,.82)";ctx.fillRect(160,GH-42,640,30);ctx.fillStyle="#fef3c7";ctx.font="600 15px system-ui";ctx.textAlign="center";ctx.fillText(this.message,GW/2,GH-22);}
     if(this.phase==="combat"||this.phase==="meteor"){ctx.fillStyle="#cbd5e1";ctx.font="13px system-ui";ctx.textAlign="center";ctx.fillText("A/D vagy ←/→: mozgás · SPACE: lövés",GW/2,GH-58);}
     if(this.phase==="meteor"){drawChip(ctx,"Meteorvihar: "+Math.ceil(this.phaseClock)+" mp",18,70,"#fbbf24");} if(this.phase==="combat"&&this.enemies.some(e=>e.boss)){drawChip(ctx,"FŐELLENSÉG",18,70,"#c084fc");}
