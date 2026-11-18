@@ -1245,6 +1245,21 @@ export const BLOCK_TYPES: BlockTypeDef[] = [
     ],
   },
   {
+    id: "game.forage",
+    label: "Erdei barangolás (gyűjtögetős)",
+    description: "Felülnézetes erdei felfedező játék. WASD / nyilak: mozgás, kattintás a közelben lévő gombára, bogyóra vagy gyógynövényre: gyűjtés. Vigyázz a mérgező gombákkal! Leltár, pontozás, életek és célmennyiség.",
+    category: "ui",
+    icon: "Trees",
+    kind: "gamemode",
+    defaultLength: 2,
+    group: "Játékmódok",
+    params: [
+      num("items", "Találatok száma a pályán", 14, 6, 28, 1, "Erdő"),
+      num("goal", "Begyűjtendő ehető termések", 8, 3, 20, 1, "Küldetés"),
+      num("target", "Végeztével ugorjon erre a lépésre (-1 = nincs)", -1, -1, 128, 1, "Vég"),
+    ],
+  },
+  {
     id: "game.online",
     label: "Online párbaj (űrhajó, 2 böngésző)",
     description: "Valódi ONLINE kétjátékos mód: az egyik játékos szobát nyit (4 betűs kód), a másik egy másik böngészőből csatlakozik – aztán űrhajós párbaj: egér = mozgás, kattintás = lövés. 5 találat dönt!",
