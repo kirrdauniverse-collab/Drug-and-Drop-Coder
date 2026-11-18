@@ -7,6 +7,7 @@ import { WormsGame } from "./worms";
 import { BuildGame } from "./build";
 import { AdventureGame } from "./adventure";
 import { ForageGame } from "./forage";
+import { GalagaGame } from "./galaga";
 import { OnlineGame } from "./online";
 
 export type { GameCtx, GameMode } from "./base";
@@ -29,6 +30,8 @@ export function createGameMode(
       return new AdventureGame(params, ctx);
     case "game.forage":
       return new ForageGame(params, ctx);
+    case "game.galaga":
+      return new GalagaGame(params, ctx);
     case "game.online":
       return new OnlineGame(params, ctx);
     default:
@@ -44,5 +47,6 @@ export const GAME_BLOCK_LABELS: Record<string, string> = {
   "game.build": "Építőmester",
   "game.adventure": "Grafikus kaland",
   "game.forage": "Erdei barangolás",
+  "game.galaga": "Star Raid – arcade űrlövölde",
   "game.online": "Online párbaj",
 };
