@@ -21,7 +21,7 @@ export class GalagaGame implements GameMode {
   isDone(){return this.done;}
   private say(s:string,now:number){this.message=s;this.messageTime=now;}
   private startWave(){this.phase="combat";this.enemies=[];this.shots=[];this.drops=[];this.spawnClock=0;const n=Math.min(18,5+this.level*2);for(let i=0;i<n;i++){const cols=Math.min(6,n);this.enemies.push({x:100+(i%cols)*145,y:95+Math.floor(i/cols)*58,vx:35+this.level*2,hp:this.level>5&&i%5===0?2:1,size:i%5===0?42:30,phase:i*1.7});}}
-  private nextStage(now:number){this.wave++;this.level++;this.say("Hullám teljesítve!",""+now as unknown as number);this.ctx.addScore(150+this.wave*20);this.ctx.sfx("sfx.win",.45);
+  private nextStage(now:number){this.wave++;this.level++;this.say("Hullám teljesítve!",now);this.ctx.addScore(150+this.wave*20);this.ctx.sfx("sfx.win",.45);
     if(this.wave%4===0){this.phase="shop";this.bonusAfterShop=this.wave%3===0;this.say("ŰRBOLT – költsd el a krediteket!",now);}
     else if(this.wave%3===0){this.startBonus(now);}
     else this.startWave();
